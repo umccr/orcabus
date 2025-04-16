@@ -21,7 +21,7 @@ get_fastq_by_rgid_and_instrument_run_id
 from functools import reduce
 from itertools import batched
 from operator import concat
-from typing import List
+from typing import List, Type, Unpack
 
 from .request_helpers import (
     get_request_response,
@@ -29,28 +29,48 @@ from .request_helpers import (
 )
 
 from .globals import FASTQ_LIST_ROW_ENDPOINT, FASTQ_SET_ENDPOINT
-from .models import FastqListRow, FastqSet, Job
+from .models import FastqListRow, FastqSet, Job, FastqListRowQueryParameters, FastqSetQueryParameters
 
 
 def get_fastq(fastq_id: str, **kwargs) -> FastqListRow:
     return get_request_response(f"{FASTQ_LIST_ROW_ENDPOINT}/{fastq_id}", params=kwargs)
 
 
-def get_fastq_set(fastq_set_id: str, **kwargs) -> FastqSet:
+def get_fastq_set(fastq_set_id: str, **kwargs: Unpack[FastqSetQueryParameters]) -> FastqSet:
     """
     Get the fastq set by id
     :param fastq_set_id:
     :param kwargs:
     :return:
     """
+    # Raise error if any of the kwargs are not in the FastqSetQueryParameters
+    for key in kwargs.keys():
+        if key not in FastqSetQueryParameters.__annotations__:
+            raise ValueError(f"Invalid parameter: {key}")
+
     return get_request_response(f"{FASTQ_SET_ENDPOINT}/{fastq_set_id}", params=kwargs)
 
 
-def get_fastqs(*args, **kwargs) -> List[FastqListRow]:
+def get_fastqs(*args, **kwargs: Unpack[FastqListRowQueryParameters]) -> List[FastqListRow]:
     """
     Get all fastqs
     """
+    # Raise error if any of the kwargs are not in the FastqListRowQueryParameters
+    for key in kwargs.keys():
+        if key not in FastqListRowQueryParameters.__annotations__:
+            raise ValueError(f"Invalid parameter: {key}")
+
     return get_request_response_results(FASTQ_LIST_ROW_ENDPOINT, params=kwargs)
+
+
+def get_fastq_sets(*args, **kwargs) -> List[FastqSet]:
+    """
+    Get the fastq set
+    :param args:
+    :param kwargs:
+    :return:
+    """
+    return get_request_response_results(FASTQ_SET_ENDPOINT, params=kwargs)
 
 
 def get_fastqs_in_instrument_run_id(instrument_run_id: str):
@@ -58,9 +78,7 @@ def get_fastqs_in_instrument_run_id(instrument_run_id: str):
     Get all fastqs in an instrument run id
     """
     return get_fastqs(
-        **{
-            "instrumentRunId": instrument_run_id
-        }
+        instrumentRunId=instrument_run_id
     )
 
 
@@ -69,9 +87,7 @@ def get_fastqs_in_library(library_id: str):
     Get all fastqs in a library
     """
     return get_fastqs(
-        **{
-            "library": library_id
-        }
+        library=library_id
     )
 
 
@@ -79,7 +95,7 @@ def get_fastqs_in_library_list(library_id_list: List[str]):
     """
     Get all fastqs in a list of libraries
     """
-    # Split by groups of 100
+    # Split by groups of 50
     library_id_lists = batched(library_id_list, 100)
 
     # Get the s3 objects
@@ -89,7 +105,8 @@ def get_fastqs_in_library_list(library_id_list: List[str]):
             list(map(
                 lambda library_id_batch_:
                 get_request_response_results(FASTQ_LIST_ROW_ENDPOINT, {
-                    "library[]": list(library_id_batch_)
+                    "library[]": list(library_id_batch_),
+                    "rowsPerPage": 1000,
                 }),
                 library_id_lists
             ))

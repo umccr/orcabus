@@ -12,6 +12,7 @@ from requests import HTTPError
 from .globals import WORKFLOW_RUN_ENDPOINT
 from .requests_helpers import get_request_response_results, get_request_results_ext, get_request_results
 from .models import WorkflowRun, State
+from .. import WorkflowRunNotFoundError
 
 
 def get_workflow_run(workflow_run_orcabus_id: str) -> WorkflowRun:
@@ -34,18 +35,24 @@ def get_workflow_run_from_portal_run_id(portal_run_id: str) -> WorkflowRun:
     :param portal_run_id:
     :return:
     """
+    from .errors import WorkflowRunNotFoundError
+
     # We have an internal id, convert to int
     params = {
         "portalRunId": portal_run_id
     }
 
+    workflow_runs_list = get_request_response_results(WORKFLOW_RUN_ENDPOINT, params)
+
+    if len(workflow_runs_list) == 0:
+        raise WorkflowRunNotFoundError(portal_run_id=portal_run_id)
+
     try:
         return get_request_results(
             WORKFLOW_RUN_ENDPOINT,
-            get_request_response_results(WORKFLOW_RUN_ENDPOINT, params)[0].get("orcabusId")
+            workflow_runs_list[0]["orcabusId"],
         )
     except HTTPError as e:
-        from .errors import WorkflowRunNotFoundError
         raise WorkflowRunNotFoundError(portal_run_id=portal_run_id) from e
 
 

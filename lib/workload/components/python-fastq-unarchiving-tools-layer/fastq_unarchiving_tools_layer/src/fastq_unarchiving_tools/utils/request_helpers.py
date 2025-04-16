@@ -71,7 +71,7 @@ def get_request_response_results(endpoint: str, params: Optional[Dict] = None) -
 
     response.raise_for_status()
 
-    return response.json()
+    return response.json()['results']
 
 
 def patch_request(endpoint: str, params: Optional[Dict] = None) -> Dict:

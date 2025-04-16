@@ -27,6 +27,7 @@ from .utils.query_helpers import (
     get_fastqs_in_individual,
     get_fastqs_in_project,
     get_fastq_set,
+    get_fastq_sets,
     get_fastq_jobs
 )
 
@@ -39,7 +40,13 @@ from .utils.update_helpers import (
     add_read_set,
     detach_read_set,
     validate_fastq,
-    invalidate_fastq
+    invalidate_fastq,
+    link_fastq_list_row_to_fastq_set,
+    unlink_fastq_list_row_from_fastq_set,
+    allow_additional_fastqs_to_fastq_set,
+    disallow_additional_fastqs_to_fastq_set,
+    set_is_current_fastq_set,
+    set_is_not_current_fastq_set,
 )
 
 from .utils.create_helpers import (
@@ -84,6 +91,7 @@ __all__ = [
 
     # Fastq Set Query helpers
     "get_fastq_set",
+    "get_fastq_sets",
 
     # Job helpers
     "get_fastq_jobs",
@@ -101,6 +109,12 @@ __all__ = [
     "detach_read_set",
     "validate_fastq",
     "invalidate_fastq",
+    "link_fastq_list_row_to_fastq_set",
+    "unlink_fastq_list_row_from_fastq_set",
+    "allow_additional_fastqs_to_fastq_set",
+    "disallow_additional_fastqs_to_fastq_set",
+    "set_is_current_fastq_set",
+    "set_is_not_current_fastq_set",
 
     # Workflow helpers
     "to_cwl",

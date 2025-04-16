@@ -15,9 +15,9 @@ Update helpers for the update script.
 # Standard imports
 
 # Local imports
-from .globals import FASTQ_LIST_ROW_ENDPOINT
+from .globals import FASTQ_LIST_ROW_ENDPOINT, FASTQ_SET_ENDPOINT
 from .request_helpers import patch_request
-from .models import QcStats, FastqListRow, ReadCount, FileCompressionInformation, FileStorageObject, ReadSet
+from .models import QcStats, FastqListRow, ReadCount, FileCompressionInformation, FileStorageObject, ReadSet, FastqSet
 
 
 def add_qc_stats(fastq_id: str, qc_stats: QcStats) -> FastqListRow:
@@ -84,6 +84,7 @@ def add_read_set(fastq_id: str, read_set: ReadSet) -> FastqListRow:
         params=read_set
     )
 
+
 def detach_read_set(fastq_id: str, read_set: ReadSet) -> FastqListRow:
     """
     Detach a read set to a fastq id.
@@ -116,4 +117,40 @@ def invalidate_fastq(fastq_id: str) -> FastqListRow:
     """
     return patch_request(
         f"{FASTQ_LIST_ROW_ENDPOINT}/{fastq_id}/invalidate"
+    )
+
+
+def link_fastq_list_row_to_fastq_set(fastq_id: str, fastq_set_id: str) -> FastqSet:
+    return patch_request(
+        f"{FASTQ_SET_ENDPOINT}/{fastq_set_id}/linkFastq/{fastq_id}"
+    )
+
+
+def unlink_fastq_list_row_from_fastq_set(fastq_id: str, fastq_set_id: str) -> FastqSet:
+    return patch_request(
+        f"{FASTQ_SET_ENDPOINT}/{fastq_set_id}/unlinkFastq/{fastq_id}"
+    )
+
+
+def allow_additional_fastqs_to_fastq_set(fastq_set_id: str) -> FastqSet:
+    return patch_request(
+        f"{FASTQ_SET_ENDPOINT}/{fastq_set_id}/allowAdditionalFastqs"
+    )
+
+
+def disallow_additional_fastqs_to_fastq_set(fastq_set_id: str) -> FastqSet:
+    return patch_request(
+        f"{FASTQ_SET_ENDPOINT}/{fastq_set_id}/disallowAdditionalFastqs"
+    )
+
+
+def set_is_current_fastq_set(fastq_set_id: str) -> FastqSet:
+    return patch_request(
+        f"{FASTQ_SET_ENDPOINT}/{fastq_set_id}/currentFastqSet"
+    )
+
+
+def set_is_not_current_fastq_set(fastq_set_id: str) -> FastqSet:
+    return patch_request(
+        f"{FASTQ_SET_ENDPOINT}/{fastq_set_id}/notCurrentFastqSet"
     )
