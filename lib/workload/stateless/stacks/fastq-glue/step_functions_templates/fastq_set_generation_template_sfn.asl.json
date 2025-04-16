@@ -1,0 +1,247 @@
+{
+  "Comment": "A description of my state machine",
+  "StartAt": "Set inputs variables",
+  "States": {
+    "Set inputs variables": {
+      "Type": "Pass",
+      "Next": "Secondary variables",
+      "Assign": {
+        "outputUri": "{% $states.input.outputUri %}",
+        "instrumentRunId": "{% $states.input.instrumentRunId %}"
+      }
+    },
+    "Secondary variables": {
+      "Type": "Pass",
+      "Next": "Get Samples in SampleSheet",
+      "Assign": {
+        "sampleSheetUri": "{% $outputUri & 'Reports/SampleSheet.csv' %}",
+        "fastqListUri": "{% $outputUri & 'Reports/fastq_list.csv' %}",
+        "demuxStatsUri": "{% $outputUri & 'Reports/Demultiplex_Stats.csv' %}"
+      }
+    },
+    "Get Samples in SampleSheet": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Arguments": {
+        "FunctionName": "${__get_samples_from_samplesheet_lambda_function_arn__}",
+        "Payload": {
+          "sampleSheetUri": "{% $sampleSheetUri %}"
+        }
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2,
+          "JitterStrategy": "FULL"
+        }
+      ],
+      "Next": "For each sample",
+      "Output": {
+        "samplesList": "{% $states.result.Payload.samplesList %}"
+      }
+    },
+    "For each sample": {
+      "Type": "Map",
+      "Label": "Foreachsample",
+      "MaxConcurrency": 1000,
+      "Items": "{% $states.input.samplesList %}",
+      "ItemSelector": {
+        "sampleIdMapIter": "{% $states.context.Map.Item.Value %}",
+        "sampleSheetUriMapIter": "{% $sampleSheetUri %}",
+        "demuxStatsUriMapIter": "{% $demuxStatsUri %}",
+        "fastqListUriMapIter": "{% $fastqListUri %}",
+        "instrumentRunIdMapIter": "{% $instrumentRunId %}"
+      },
+      "ItemProcessor": {
+        "ProcessorConfig": {
+          "Mode": "DISTRIBUTED",
+          "ExecutionType": "EXPRESS"
+        },
+        "StartAt": "Get vars inside map",
+        "States": {
+          "Get vars inside map": {
+            "Type": "Pass",
+            "Next": "Get Per Sample Stats",
+            "Assign": {
+              "sampleIdMapIter": "{% $states.input.sampleIdMapIter %}",
+              "sampleSheetUriMapIter": "{% $states.input.sampleSheetUriMapIter %}",
+              "demuxStatsUriMapIter": "{% $states.input.demuxStatsUriMapIter %}",
+              "fastqListUriMapIter": "{% $states.input.fastqListUriMapIter %}",
+              "instrumentRunIdMapIter": "{% $states.input.instrumentRunIdMapIter %}"
+            }
+          },
+          "Get Per Sample Stats": {
+            "Type": "Parallel",
+            "Branches": [
+              {
+                "StartAt": "Get Read Count from Demux Stats",
+                "States": {
+                  "Get Read Count from Demux Stats": {
+                    "Type": "Task",
+                    "Resource": "arn:aws:states:::lambda:invoke",
+                    "Arguments": {
+                      "FunctionName": "${__get_sample_demultiplex_stats_lambda_function_arn__}",
+                      "Payload": {
+                        "sampleId": "{% $sampleIdMapIter %}",
+                        "demuxStatsUri": "{% $demuxStatsUriMapIter %}"
+                      }
+                    },
+                    "Retry": [
+                      {
+                        "ErrorEquals": [
+                          "Lambda.ServiceException",
+                          "Lambda.AWSLambdaException",
+                          "Lambda.SdkClientException",
+                          "Lambda.TooManyRequestsException"
+                        ],
+                        "IntervalSeconds": 1,
+                        "MaxAttempts": 3,
+                        "BackoffRate": 2,
+                        "JitterStrategy": "FULL"
+                      }
+                    ],
+                    "End": true,
+                    "Output": {
+                      "sampleDemuxStats": "{% $states.result.Payload.sampleDemuxStats %}"
+                    }
+                  }
+                }
+              },
+              {
+                "StartAt": "Get File Names from Fastq List Csv",
+                "States": {
+                  "Get File Names from Fastq List Csv": {
+                    "Type": "Task",
+                    "Resource": "arn:aws:states:::lambda:invoke",
+                    "Output": {
+                      "sampleFileNames": "{% $states.result.Payload.sampleFileNames %}"
+                    },
+                    "Arguments": {
+                      "FunctionName": "${__get_file_names_from_fastq_list_csv_lambda_function_arn__}",
+                      "Payload": {
+                        "sampleId": "{% $sampleIdMapIter %}",
+                        "fastqListUri": "{% $fastqListUriMapIter %}"
+                      }
+                    },
+                    "Retry": [
+                      {
+                        "ErrorEquals": [
+                          "Lambda.ServiceException",
+                          "Lambda.AWSLambdaException",
+                          "Lambda.SdkClientException",
+                          "Lambda.TooManyRequestsException"
+                        ],
+                        "IntervalSeconds": 1,
+                        "MaxAttempts": 3,
+                        "BackoffRate": 2,
+                        "JitterStrategy": "FULL"
+                      }
+                    ],
+                    "End": true
+                  }
+                }
+              },
+              {
+                "StartAt": "Get BCLConvert Data from SampleSheet",
+                "States": {
+                  "Get BCLConvert Data from SampleSheet": {
+                    "Type": "Task",
+                    "Resource": "arn:aws:states:::lambda:invoke",
+                    "Output": {
+                      "sampleBclConvertData": "{% $states.result.Payload.sampleBclConvertData %}"
+                    },
+                    "Arguments": {
+                      "FunctionName": "${__get_bclconvert_data_from_samplesheet_lambda_function_arn__}",
+                      "Payload": {
+                        "sampleId": "{% $sampleIdMapIter %}",
+                        "sampleSheetUri": "{% $sampleSheetUriMapIter %}"
+                      }
+                    },
+                    "Retry": [
+                      {
+                        "ErrorEquals": [
+                          "Lambda.ServiceException",
+                          "Lambda.AWSLambdaException",
+                          "Lambda.SdkClientException",
+                          "Lambda.TooManyRequestsException"
+                        ],
+                        "IntervalSeconds": 1,
+                        "MaxAttempts": 3,
+                        "BackoffRate": 2,
+                        "JitterStrategy": "FULL"
+                      }
+                    ],
+                    "End": true
+                  }
+                }
+              }
+            ],
+            "Next": "Generate Fastq Set Object",
+            "Output": {
+              "sampleDemuxStats": "{% $states.result[0].sampleDemuxStats %}",
+              "sampleFileNames": "{% $states.result[1].sampleFileNames %}",
+              "sampleBclConvertData": "{% $states.result[2].sampleBclConvertData %}"
+            }
+          },
+          "Generate Fastq Set Object": {
+            "Type": "Task",
+            "Resource": "arn:aws:states:::lambda:invoke",
+            "Output": null,
+            "Arguments": {
+              "FunctionName": "${__create_fastq_set_object_lambda_function_arn__}",
+              "Payload": {
+                "sampleId": "{% $sampleIdMapIter %}",
+                "sampleDemuxStats": "{% $states.input.sampleDemuxStats %}",
+                "sampleFileNames": "{% $states.input.sampleFileNames %}",
+                "sampleBclConvertData": "{% $states.input.sampleBclConvertData %}",
+                "instrumentRunId": "{% $instrumentRunIdMapIter %}"
+              }
+            },
+            "Retry": [
+              {
+                "ErrorEquals": [
+                  "Lambda.ServiceException",
+                  "Lambda.AWSLambdaException",
+                  "Lambda.SdkClientException",
+                  "Lambda.TooManyRequestsException"
+                ],
+                "IntervalSeconds": 1,
+                "MaxAttempts": 3,
+                "BackoffRate": 2,
+                "JitterStrategy": "FULL"
+              }
+            ],
+            "End": true
+          }
+        }
+      },
+      "Output": null,
+      "Next": "Generate Fastq Set Object Generation Complete Event"
+    },
+    "Generate Fastq Set Object Generation Complete Event": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::events:putEvents",
+      "Arguments": {
+        "Entries": [
+          {
+            "Detail": {
+              "instrumentRunId": "{% $instrumentRunId %}"
+            },
+            "DetailType": "${__event_detail_type__}",
+            "EventBusName": "${__event_bus_name__}",
+            "Source": "${__event_source__}"
+          }
+        ]
+      },
+      "End": true
+    }
+  },
+  "QueryLanguage": "JSONata"
+}

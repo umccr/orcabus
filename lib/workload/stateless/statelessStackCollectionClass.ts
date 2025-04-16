@@ -93,6 +93,7 @@ import {
   DataSharingStack,
   DataSharingStackProps,
 } from './stacks/data-sharing-manager/deploy/stack';
+import { FastqGlueStack, FastqGlueStackProps } from './stacks/fastq-glue/deploy';
 
 export interface StatelessStackCollectionProps {
   metadataManagerStackProps: MetadataManagerStackProps;
@@ -126,6 +127,7 @@ export interface StatelessStackCollectionProps {
   fastqSyncManagerStackProps: FastqSyncManagerStackProps;
   icav2DataCopyManagerStackProps: Icav2DataCopyManagerStackProps;
   dataSharingStackProps: DataSharingStackProps;
+  fastqGlueStackProps: FastqGlueStackProps;
 }
 
 export class StatelessStackCollection {
@@ -161,6 +163,7 @@ export class StatelessStackCollection {
   readonly fastqSyncManagerStack: Stack;
   readonly icav2DataCopyManagerStack: Stack;
   readonly dataSharingStack: Stack;
+  readonly fastqGlueStack: Stack;
 
   constructor(
     scope: Construct,
@@ -381,6 +384,10 @@ export class StatelessStackCollection {
     this.dataSharingStack = new DataSharingStack(scope, 'DataSharingStack', {
       ...this.createTemplateProps(env, 'DataSharingStack'),
       ...statelessConfiguration.dataSharingStackProps,
+    });
+    this.fastqGlueStack = new FastqGlueStack(scope, 'FastqGlueStack', {
+      ...this.createTemplateProps(env, 'FastqGlueStack'),
+      ...statelessConfiguration.fastqGlueStackProps,
     });
   }
 
