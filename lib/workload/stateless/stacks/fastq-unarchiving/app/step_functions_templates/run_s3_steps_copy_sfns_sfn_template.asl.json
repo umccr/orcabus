@@ -1,0 +1,328 @@
+{
+  "Comment": "A description of my state machine",
+  "QueryLanguage": "JSONata",
+  "StartAt": "Set Vars",
+  "States": {
+    "Set Vars": {
+      "Type": "Pass",
+      "Next": "Wait",
+      "Assign": {
+        "jobId": "{% $states.input.jobId %}",
+        "fastqIdList": "{% $states.input.fastqIdList %}",
+        "s3StepsCopyBucket": "${__aws_s3_copy_steps_bucket__}",
+        "s3StepsCopyCsvKey": "{% '${__aws_s3_copy_steps_key_prefix__}' & $states.context.Execution.Name & '.__index__.csv' %}",
+        "restoreBucket": "${__aws_s3_pipeline_cache_bucket__}",
+        "restorePrefix": "{% '${__aws_s3_pipeline_cache_restore_prefix__}' & $now('year=[Y0001]/month=[M01]/day=[D01]') & '/' & $states.context.Execution.Name & '/' %}"
+      }
+    },
+    "Wait": {
+      "Type": "Wait",
+      "Seconds": 5,
+      "Next": "Add Unarchiving job running event"
+    },
+    "Add Unarchiving job running event": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Output": "{% $states.result.Payload %}",
+      "Arguments": {
+        "FunctionName": "${__update_job_database_lambda_function_arn__}",
+        "Payload": {
+          "jobId": "{% $jobId %}",
+          "status": "RUNNING"
+        }
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2,
+          "JitterStrategy": "FULL"
+        }
+      ],
+      "Next": "Split fastq ids by instrument run id"
+    },
+    "Split fastq ids by instrument run id": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Output": "{% $states.result.Payload %}",
+      "Arguments": {
+        "FunctionName": "${__split_fastq_ids_by_instrument_run_id_lambda_function_arn__}",
+        "Payload": {
+          "fastqIdList": "{% $fastqIdList %}"
+        }
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2,
+          "JitterStrategy": "FULL"
+        }
+      ],
+      "Next": "For each instrument run id"
+    },
+    "For each instrument run id": {
+      "Type": "Map",
+      "Items": "{% $states.input.fastqIdsByInstrumentRunId %}",
+      "ItemSelector": {
+        "instrumentRunId": "{% $states.context.Map.Item.Value.instrumentRunId %}",
+        "fastqIdListMapIter": "{% $states.context.Map.Item.Value.fastqIdList %}",
+        "s3StepsCopyBucket": "{% $s3StepsCopyBucket %}",
+        "s3StepsCopyKeyMapIter": "{% /* https://try.jsonata.org/mZnjTty1- */ $replace($s3StepsCopyCsvKey, '__index__', $string($states.context.Map.Item.Index)) %}",
+        "restoreBucketMapIter": "{% $restoreBucket %}",
+        "restorePrefixMapIter": "{% $restorePrefix & $states.context.Map.Item.Value.instrumentRunId & '/' %}"
+      },
+      "ItemProcessor": {
+        "ProcessorConfig": {
+          "Mode": "INLINE"
+        },
+        "StartAt": "Set vars in map",
+        "States": {
+          "Set vars in map": {
+            "Type": "Pass",
+            "Next": "Generate steps function csv and upload to s3",
+            "Assign": {
+              "instrumentRunIdMapIter": "{% $states.input.instrumentRunId %}",
+              "fastqIdListMapIter": "{% $states.input.fastqIdListMapIter %}",
+              "s3StepsCopyBucketMapIter": "{% $states.input.s3StepsCopyBucket %}",
+              "s3StepsCopyKeyMapIter": "{% $states.input.s3StepsCopyKeyMapIter %}",
+              "restoreBucketMapIter": "{% $states.input.restoreBucketMapIter %}",
+              "restorePrefixMapIter": "{% $states.input.restorePrefixMapIter %}"
+            }
+          },
+          "Generate steps function csv and upload to s3": {
+            "Type": "Task",
+            "Resource": "arn:aws:states:::lambda:invoke",
+            "Output": "{% $states.result.Payload %}",
+            "Arguments": {
+              "FunctionName": "${__create_csv_for_s3_steps_copy_lambda_function_arn__}",
+              "Payload": {
+                "fastqIdList": "{% $fastqIdListMapIter %}",
+                "s3StepsCopyBucket": "{% $s3StepsCopyBucketMapIter %}",
+                "s3StepsCopyKey": "{% $s3StepsCopyKeyMapIter %}"
+              }
+            },
+            "Retry": [
+              {
+                "ErrorEquals": [
+                  "Lambda.ServiceException",
+                  "Lambda.AWSLambdaException",
+                  "Lambda.SdkClientException",
+                  "Lambda.TooManyRequestsException"
+                ],
+                "IntervalSeconds": 1,
+                "MaxAttempts": 3,
+                "BackoffRate": 2,
+                "JitterStrategy": "FULL"
+              }
+            ],
+            "Next": "Run unarchiver"
+          },
+          "Run unarchiver": {
+            "Type": "Task",
+            "Resource": "arn:aws:states:::states:startExecution.sync:2",
+            "Arguments": {
+              "StateMachineArn": "${__aws_s3_steps_copy_sfn_arn__}",
+              "Input": {
+                "sourceFilesCsvKey": "{% $s3StepsCopyKeyMapIter %}",
+                "destinationBucket": "{% $restoreBucketMapIter %}",
+                "destinationPrefixKey": "{% $restorePrefixMapIter %}",
+                "maxItemsPerBatch": 1
+              }
+            },
+            "Next": "ListObjectsV2",
+            "Catch": [
+              {
+                "ErrorEquals": ["States.ALL"],
+                "Next": "Add failed as output",
+                "Comment": "Steps function failure",
+                "Output": {
+                  "stepsExecutionId": "{% $states.errorOutput %}",
+                  "error": "{% $states.errorOutput ? $states.errorOutput : null %}"
+                }
+              }
+            ],
+            "Output": {
+              "output": "{% $states.result.Output %}"
+            }
+          },
+          "ListObjectsV2": {
+            "Type": "Task",
+            "Arguments": {
+              "Bucket": "{% $restoreBucketMapIter %}",
+              "Prefix": "{% $restorePrefixMapIter %}"
+            },
+            "Resource": "arn:aws:states:::aws-sdk:s3:listObjectsV2",
+            "Next": "For each output file",
+            "Output": {
+              "fileList": "{% /* https://try.jsonata.org/QOikiNxbj */\n[\n  $filter(\n    [\n        $map(\n          $states.result.Contents, \n          function($contentIter){\n            {\n              \"Bucket\": $restoreBucketMapIter,\n              \"Key\": $contentIter.Key\n            }\n          }\n        )\n    ],\n    function($bucketKeyPairIter){\n      $not(\n        $contains($bucketKeyPairIter.Key, \"STARTED_COPY.txt\") or \n        $contains($bucketKeyPairIter.Key, \"ENDED_COPY.csv\")\n      )\n    }\n  )\n] %}"
+            }
+          },
+          "Add failed as output": {
+            "Type": "Pass",
+            "End": true,
+            "Output": {
+              "errorMessage": "{% 'S3 Copy Steps ' & $states.input.stepsExecutionId & ' failed' %}",
+              "hasError": true
+            }
+          },
+          "For each output file": {
+            "Type": "Map",
+            "Items": "{% $states.input.fileList %}",
+            "ItemSelector": {
+              "bucketIter": "{% $states.context.Map.Item.Value.Bucket %}",
+              "keyIter": "{% $states.context.Map.Item.Value.Key %}",
+              "fastqIdListIter": "{% $fastqIdListMapIter %}"
+            },
+            "ItemProcessor": {
+              "ProcessorConfig": {
+                "Mode": "DISTRIBUTED",
+                "ExecutionType": "STANDARD"
+              },
+              "StartAt": "Map Iter Vars",
+              "States": {
+                "Map Iter Vars": {
+                  "Type": "Pass",
+                  "Next": "Find Original Ingest ID",
+                  "Assign": {
+                    "fastqIdListIngestMapIter": "{% $states.input.fastqIdListIter %}",
+                    "bucketIngestMapIter": "{% $states.input.bucketIter %}",
+                    "keyIngestMapIter": "{% $states.input.keyIter %}",
+                    "s3UriIngestMapIter": "{% 's3://' & $states.input.bucketIter & '/' & $states.input.keyIter %}"
+                  }
+                },
+                "Find Original Ingest ID": {
+                  "Type": "Task",
+                  "Resource": "arn:aws:states:::lambda:invoke",
+                  "Arguments": {
+                    "FunctionName": "${__get_original_ingest_id_lambda_function_arn__}",
+                    "Payload": {
+                      "fastqIdList": "{% $fastqIdListIngestMapIter %}",
+                      "s3Uri": "{% $s3UriIngestMapIter %}"
+                    }
+                  },
+                  "Retry": [
+                    {
+                      "ErrorEquals": [
+                        "Lambda.ServiceException",
+                        "Lambda.AWSLambdaException",
+                        "Lambda.SdkClientException",
+                        "Lambda.TooManyRequestsException"
+                      ],
+                      "IntervalSeconds": 1,
+                      "MaxAttempts": 3,
+                      "BackoffRate": 2,
+                      "JitterStrategy": "FULL"
+                    }
+                  ],
+                  "Next": "Manually update ingest id",
+                  "Output": {
+                    "fastqId": "{% $states.result.Payload.fastqId %}",
+                    "ingestId": "{% $states.result.Payload.ingestId %}"
+                  }
+                },
+                "Manually update ingest id": {
+                  "Type": "Task",
+                  "Resource": "arn:aws:states:::lambda:invoke",
+                  "Output": "{% $states.result.Payload %}",
+                  "Arguments": {
+                    "FunctionName": "${__update_ingest_id_lambda_function_arn__}",
+                    "Payload": {
+                      "fastqId": "{% $states.input.fastqId %}",
+                      "ingestId": "{% $states.input.ingestId %}",
+                      "bucket": "{% $bucketIngestMapIter %}",
+                      "key": "{% $keyIngestMapIter %}"
+                    }
+                  },
+                  "Retry": [
+                    {
+                      "ErrorEquals": [
+                        "Lambda.ServiceException",
+                        "Lambda.AWSLambdaException",
+                        "Lambda.SdkClientException",
+                        "Lambda.TooManyRequestsException"
+                      ],
+                      "IntervalSeconds": 1,
+                      "MaxAttempts": 3,
+                      "BackoffRate": 2,
+                      "JitterStrategy": "FULL"
+                    }
+                  ],
+                  "Catch": [
+                    {
+                      "ErrorEquals": ["States.TaskFailed"],
+                      "Comment": "Update ingest id failure",
+                      "Next": "Add failed messaged as output (ingest error)"
+                    }
+                  ],
+                  "End": true
+                },
+                "Add failed messaged as output (ingest error)": {
+                  "Type": "Pass",
+                  "End": true,
+                  "Output": {
+                    "errorMessage": "{% 'Ingest ID update s3 uri ' & $s3UriIngestMapIter %}",
+                    "hasError": true
+                  }
+                }
+              }
+            },
+            "End": true,
+            "Label": "Foreachoutputfile",
+            "MaxConcurrency": 1000,
+            "Output": {
+              "hasError": "{% /* Check if any iterable of hasError is set to true  -  https://try.jsonata.org/9IqHtAIc0 */\n$sum(\n  [\n    $map($states.result, function($resultIter){$resultIter.hasError = true ? 1 : 0})\n  ]\n) > 0 ? true : false %}",
+              "errorMessage": "{% /* Append error messages if they exist  - https://try.jsonata.org/ISxrerk39 */\n(\n  $appendMessages := function($i, $j){$i or $j ? $i & \" \" & $j : \"\"};\n  $errorMessages := [\n    $map(\n      [$filter(\n        $states.result,\n        function($resultIter){\n          $resultIter.errorMessage ? true : false\n        }\n      )],\n      function($resultIter){$resultIter.errorMessage}\n    )\n  ];\n  $errorMessages ? $reduce($errorMessages, $appendMessages) : null\n)\n %}"
+            }
+          }
+        }
+      },
+      "Next": "Update job database",
+      "Output": {
+        "hasError": "{% /* Check if any iterable of hasError is set to true  -  https://try.jsonata.org/9IqHtAIc0 */\n$sum(\n  [\n    $map($states.result, function($resultIter){$resultIter.hasError = true ? 1 : 0})\n  ]\n) > 0 ? true : false %}",
+        "errorMessage": "{% /* Append error messages if they exist  - https://try.jsonata.org/ISxrerk39 */\n(\n  $appendMessages := function($i, $j){$i or $j ? $i & \" \" & $j : \"\"};\n  $errorMessages := [\n    $map(\n      [$filter(\n        $states.result,\n        function($resultIter){\n          $resultIter.errorMessage ? true : false\n        }\n      )],\n      function($resultIter){$resultIter.errorMessage}\n    )\n  ];\n  $errorMessages ? $reduce($errorMessages, $appendMessages) : null\n)\n %}"
+      }
+    },
+    "Update job database": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Output": "{% $states.result.Payload %}",
+      "Arguments": {
+        "FunctionName": "${__update_job_database_lambda_function_arn__}",
+        "Payload": {
+          "jobId": "{% $jobId %}",
+          "hasError": "{% $states.input.hasError %}",
+          "errorMessages": "{% $states.input.errorMessage %}",
+          "status": "{% $states.input.hasError ? 'FAILED' : 'SUCCEEDED' %}"
+        }
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2,
+          "JitterStrategy": "FULL"
+        }
+      ],
+      "End": true
+    }
+  }
+}
