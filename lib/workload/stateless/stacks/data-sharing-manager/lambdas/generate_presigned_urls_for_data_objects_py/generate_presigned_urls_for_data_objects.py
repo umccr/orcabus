@@ -96,27 +96,27 @@ def handler(event, context) -> Dict[str, List[Dict[str, str]]]:
     }
 
 
-if __name__ == "__main__":
-    from os import environ
-    import json
-    environ['AWS_REGION'] = 'ap-southeast-2'
-    environ['AWS_PROFILE'] = 'umccr-production'
-    environ['HOSTNAME_SSM_PARAMETER'] = '/hosted_zone/umccr/name'
-    environ['ORCABUS_TOKEN_SECRET_ID'] = 'orcabus/token-service-jwt'
-    print(json.dumps(
-        handler(
-            {
-                "ingestIdList": [
-                    "01960822-f3ee-77d0-8fa4-91d5c2e17ad9",
-                ]
-            },
-            None
-        ),
-        indent=4)
-    )
-
-      # {
-      #     "ingestId": "01960822-f3ee-77d0-8fa4-91d5c2e17ad9",
-      #     "presignedUrl": "...",
-      #     "presignedExpiry": "2025-04-14T22:52:35Z"
-      # },
+# if __name__ == "__main__":
+#     from os import environ
+#     import json
+#     environ['AWS_REGION'] = 'ap-southeast-2'
+#     environ['AWS_PROFILE'] = 'umccr-production'
+#     environ['HOSTNAME_SSM_PARAMETER'] = '/hosted_zone/umccr/name'
+#     environ['ORCABUS_TOKEN_SECRET_ID'] = 'orcabus/token-service-jwt'
+#     print(json.dumps(
+#         handler(
+#             {
+#                 "ingestIdList": [
+#                     "01960822-f3ee-77d0-8fa4-91d5c2e17ad9",
+#                 ]
+#             },
+#             None
+#         ),
+#         indent=4)
+#     )
+#
+#       # {
+#       #     "ingestId": "01960822-f3ee-77d0-8fa4-91d5c2e17ad9",
+#       #     "presignedUrl": "...",
+#       #     "presignedExpiry": "2025-04-14T22:52:35Z"
+#       # },

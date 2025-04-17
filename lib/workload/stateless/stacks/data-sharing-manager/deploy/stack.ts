@@ -327,7 +327,7 @@ export class DataSharingStack extends Stack {
     // Add container to task role
     const dataSummaryReportContainer = taskDefinition.addContainer('dataSummaryReportContainer', {
       image: ecs.ContainerImage.fromDockerImageAsset(
-        new ecrAssets.DockerImageAsset(this, 'gzipRawMd5sum', {
+        new ecrAssets.DockerImageAsset(this, 'data_summary_reporter', {
           directory: path.join(__dirname, '../ecs/tasks/generate_data_summary_report'),
           buildArgs: {
             TARGETPLATFORM: architecture.dockerPlatform,
@@ -655,6 +655,33 @@ export class DataSharingStack extends Stack {
         actions: ['events:PutTargets', 'events:PutRule', 'events:DescribeRule'],
       })
     );
+
+    // Pusher requires permissions to execute itself
+    // Because this steps execution uses a distributed map in its step function, we
+    // have to wire up some extra permissions
+    // Grant the state machine's role to execute itself
+    // However we cannot just grant permission to the role as this will result in a circular dependency
+    // between the state machine and the role
+    // Instead we use the workaround here - https://github.com/aws/aws-cdk/issues/28820#issuecomment-1936010520
+    // packagingStateMachine.grantStartExecution(packagingStateMachine);
+    const distributedMapPolicy = new iam.Policy(this, 'push-sfn-distributed-map-policy', {
+      document: new iam.PolicyDocument({
+        statements: [
+          new iam.PolicyStatement({
+            resources: [s3PushStateMachine.stateMachineArn],
+            actions: ['states:StartExecution'],
+          }),
+          new iam.PolicyStatement({
+            resources: [
+              `arn:aws:states:${cdk.Aws.REGION}:${cdk.Aws.ACCOUNT_ID}:execution:${s3PushStateMachine.stateMachineName}/*:*`,
+            ],
+            actions: ['states:RedriveExecution'],
+          }),
+        ],
+      }),
+    });
+    // Add the policy to the state machine role
+    s3PushStateMachine.role.attachInlinePolicy(distributedMapPolicy);
 
     // https://docs.aws.amazon.com/step-functions/latest/dg/connect-stepfunctions.html#sync-async-iam-policies
     // Polling requires permission for states:DescribeExecution
