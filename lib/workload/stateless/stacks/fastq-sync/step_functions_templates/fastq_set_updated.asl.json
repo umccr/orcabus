@@ -1,0 +1,313 @@
+{
+  "Comment": "A description of my state machine",
+  "StartAt": "Set input and global vars",
+  "States": {
+    "Set input and global vars": {
+      "Type": "Pass",
+      "Next": "Get Fastq Set Id Item",
+      "Assign": {
+        "fastqSetId": "{% $states.input.fastqSetId %}",
+        "dynamoDbTableName": "${__dynamodb_table_name__}",
+        "dynamoDbIdTypeKeys": {
+          "fastqSetId": "FASTQ_SET_ID",
+          "taskToken": "TASK_TOKEN"
+        }
+      }
+    },
+    "Get Fastq Set Id Item": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:getItem",
+      "Arguments": {
+        "TableName": "{% $dynamoDbTableName %}",
+        "Key": {
+          "id": {
+            "S": "{% $fastqSetId %}"
+          },
+          "id_type": {
+            "S": "{% $dynamoDbIdTypeKeys.fastqSetId %}"
+          }
+        }
+      },
+      "Next": "Has Task Tokens"
+    },
+    "Has Task Tokens": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Next": "Get all task token objects in fastq set id",
+          "Comment": "Fastq Set has task tokens",
+          "Condition": "{% $states.input.Item ? true : false %}",
+          "Output": {
+            "taskTokens": "{% $states.input.Item.task_token_set.SS %}"
+          }
+        }
+      ],
+      "Default": "Success"
+    },
+    "Get all task token objects in fastq set id": {
+      "Type": "Map",
+      "Items": "{% $states.input.taskTokens %}",
+      "ItemSelector": {
+        "taskTokenMapIter": "{% $states.context.Map.Item.Value %}"
+      },
+      "MaxConcurrency": 1,
+      "ItemProcessor": {
+        "ProcessorConfig": {
+          "Mode": "INLINE"
+        },
+        "StartAt": "Set map vars",
+        "States": {
+          "Set map vars": {
+            "Type": "Pass",
+            "Next": "Get task token requirements",
+            "Assign": {
+              "taskTokenMapIter": "{% $states.input.taskTokenMapIter %}"
+            }
+          },
+          "Get task token requirements": {
+            "Type": "Task",
+            "Resource": "arn:aws:states:::dynamodb:getItem",
+            "Arguments": {
+              "TableName": "{% $dynamoDbTableName %}",
+              "Key": {
+                "id": {
+                  "S": "{% $taskTokenMapIter %}"
+                },
+                "id_type": {
+                  "S": "{% $dynamoDbIdTypeKeys.taskToken %}"
+                }
+              }
+            },
+            "Next": "Check task token requirements against fastq set id",
+            "Assign": {
+              "requirementsSetMapIter": "{% $states.result.Item.requirements_set.SS %}"
+            }
+          },
+          "Check task token requirements against fastq set id": {
+            "Type": "Task",
+            "Resource": "arn:aws:states:::lambda:invoke",
+            "Output": {
+              "hasAllRequirements": "{% $states.result.Payload.hasAllRequirements %}"
+            },
+            "Arguments": {
+              "FunctionName": "${__check_fastq_set_id_against_requirements_lambda_function_arn__}",
+              "Payload": {
+                "fastqSetId": "{% $fastqSetId %}",
+                "requirements": "{% $requirementsSetMapIter %}"
+              }
+            },
+            "Retry": [
+              {
+                "ErrorEquals": [
+                  "Lambda.ServiceException",
+                  "Lambda.AWSLambdaException",
+                  "Lambda.SdkClientException",
+                  "Lambda.TooManyRequestsException"
+                ],
+                "IntervalSeconds": 1,
+                "MaxAttempts": 3,
+                "BackoffRate": 2,
+                "JitterStrategy": "FULL"
+              }
+            ],
+            "Next": "Matches requirements"
+          },
+          "Matches requirements": {
+            "Type": "Choice",
+            "Choices": [
+              {
+                "Next": "Meets all requirements",
+                "Condition": "{% $states.input.hasAllRequirements %}",
+                "Comment": "All requirements satisfied"
+              }
+            ],
+            "Default": "Task token requirement outputs"
+          },
+          "Meets all requirements": {
+            "Type": "Task",
+            "Arguments": {
+              "Output": {},
+              "TaskToken": "{% $taskTokenMapIter %}"
+            },
+            "Resource": "arn:aws:states:::aws-sdk:sfn:sendTaskSuccess",
+            "Next": "Clean up"
+          },
+          "Clean up": {
+            "Type": "Parallel",
+            "Branches": [
+              {
+                "StartAt": "Delete task token",
+                "States": {
+                  "Delete task token": {
+                    "Type": "Task",
+                    "Resource": "arn:aws:states:::dynamodb:deleteItem",
+                    "Arguments": {
+                      "TableName": "{% $dynamoDbTableName %}",
+                      "Key": {
+                        "id": {
+                          "S": "{% $taskTokenMapIter %}"
+                        },
+                        "id_type": {
+                          "S": "{% $dynamoDbIdTypeKeys.taskToken %}"
+                        }
+                      }
+                    },
+                    "End": true
+                  }
+                }
+              },
+              {
+                "StartAt": "Get fastq set item (map iter)",
+                "States": {
+                  "Get fastq set item (map iter)": {
+                    "Type": "Task",
+                    "Resource": "arn:aws:states:::dynamodb:getItem",
+                    "Arguments": {
+                      "TableName": "{% $dynamoDbTableName %}",
+                      "Key": {
+                        "id": {
+                          "S": "{% $fastqSetId %}"
+                        },
+                        "id_type": {
+                          "S": "{% $dynamoDbIdTypeKeys.fastqSetId %}"
+                        }
+                      }
+                    },
+                    "Next": "Only one token in fastq set"
+                  },
+                  "Only one token in fastq set": {
+                    "Type": "Choice",
+                    "Choices": [
+                      {
+                        "Next": "Delete fastq set id from db",
+                        "Condition": "{% $count($states.input.Item.task_token_set) = 1 %}"
+                      }
+                    ],
+                    "Default": "Pop task token from fastq set id"
+                  },
+                  "Delete fastq set id from db": {
+                    "Type": "Task",
+                    "Resource": "arn:aws:states:::dynamodb:deleteItem",
+                    "Arguments": {
+                      "TableName": "{% $dynamoDbTableName %}",
+                      "Key": {
+                        "id": {
+                          "S": "{% $fastqSetId %}"
+                        },
+                        "id_type": {
+                          "S": "{% $dynamoDbIdTypeKeys.fastqSetId %}"
+                        }
+                      }
+                    },
+                    "End": true
+                  },
+                  "Pop task token from fastq set id": {
+                    "Type": "Task",
+                    "Resource": "arn:aws:states:::dynamodb:updateItem",
+                    "Arguments": {
+                      "TableName": "{% $dynamoDbTableName %}",
+                      "Key": {
+                        "id": {
+                          "S": "{% $fastqSetId %}"
+                        },
+                        "id_type": {
+                          "S": "{% $dynamoDbIdTypeKeys.fastqSetId %}"
+                        }
+                      },
+                      "UpdateExpression": "SET task_token_set = task_token_set - :removed_task_token",
+                      "ExpressionAttributeValues": {
+                        ":removed_task_token": {
+                          "SS": ["{% $taskTokenMapIter %}"]
+                        }
+                      }
+                    },
+                    "End": true
+                  }
+                }
+              }
+            ],
+            "Next": "Set output requirements (none)"
+          },
+          "Set output requirements (none)": {
+            "Type": "Pass",
+            "End": true,
+            "Output": {
+              "requirementsSetMapIter": []
+            }
+          },
+          "Task token requirement outputs": {
+            "Type": "Pass",
+            "End": true,
+            "Output": {
+              "requirementsSetMapIter": "{% $requirementsSetMapIter %}"
+            }
+          }
+        }
+      },
+      "Next": "Get fastq list row ids from fastq set id",
+      "Assign": {
+        "requirementsSet": "{% /* Flatten and get distinct list of requirements  -  https://try.jsonata.org/DJQepsa_K */\n(\n  $appendRequirements := function($i, $j){$distinct($append($i, $j))};\n  $reduce(\n    [\n      $map($states.result, function($resultIter){$resultIter.requirementsSetMapIter})      \n    ],\n    $appendRequirements\n  )\n)\n\n %}"
+      }
+    },
+    "Get fastq list row ids from fastq set id": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Output": {
+        "fastqListRowIdList": "{% $states.result.Payload.fastqListRowIdList %}"
+      },
+      "Arguments": {
+        "FunctionName": "${__get_fastq_list_row_from_fastq_set_id_lambda_function_arn__}",
+        "Payload": {
+          "fastqSetId": "{% $fastqSetId %}"
+        }
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2,
+          "JitterStrategy": "FULL"
+        }
+      ],
+      "Next": "For each fastq list row in fastq set"
+    },
+    "For each fastq list row in fastq set": {
+      "Type": "Map",
+      "Items": "{% $states.input.fastqListRowIdList %}",
+      "ItemSelector": {
+        "fastqListRowIdMapIter": "{% $states.context.Map.Item.Value %}"
+      },
+      "ItemProcessor": {
+        "ProcessorConfig": {
+          "Mode": "INLINE"
+        },
+        "StartAt": "Launch requirements for fastq list row",
+        "States": {
+          "Launch requirements for fastq list row": {
+            "Type": "Task",
+            "Resource": "arn:aws:states:::states:startExecution.sync:2",
+            "Arguments": {
+              "StateMachineArn": "${__launch_requirements_sfn_arn__}",
+              "Input": {
+                "fastqListRowId": "{% $states.input.fastqListRowIdMapIter %}",
+                "requirements": "{% $requirementsSet %}"
+              }
+            },
+            "End": true
+          }
+        }
+      },
+      "End": true
+    },
+    "Success": {
+      "Type": "Succeed"
+    }
+  },
+  "QueryLanguage": "JSONata"
+}

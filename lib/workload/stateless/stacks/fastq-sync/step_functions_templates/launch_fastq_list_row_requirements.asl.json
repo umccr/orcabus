@@ -1,0 +1,243 @@
+{
+  "Comment": "A description of my state machine",
+  "StartAt": "Save vars",
+  "States": {
+    "Save vars": {
+      "Type": "Pass",
+      "Next": "Get fastq list row and remaining requirements",
+      "Assign": {
+        "fastqListRowId": "{% $states.input.fastqListRowId %}",
+        "requirements": "{% $states.input.requirements %}"
+      }
+    },
+    "Get fastq list row and remaining requirements": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Arguments": {
+        "FunctionName": "${__get_fastq_list_row_and_requirements_lambda_function_arn__}",
+        "Payload": {
+          "fastqListRowId": "{% $fastqListRowId %}",
+          "requirements": "{% $requirements %}"
+        }
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2,
+          "JitterStrategy": "FULL"
+        }
+      ],
+      "Next": "Has readset",
+      "Assign": {
+        "fastqListRowObj": "{% $states.result.Payload.fastqListRowObj %}",
+        "satisfiedRequirements": "{% $states.result.Payload.satisfiedRequirements %}",
+        "unsatisfiedRequirements": "{% $states.result.Payload.unsatisfiedRequirements %}"
+      }
+    },
+    "Has readset": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Next": "fastq needs unarchiving",
+          "Condition": "{% $fastqListRowObj.readSet ? true : false %}",
+          "Comment": "Run jobs"
+        }
+      ],
+      "Default": "No readset to add jobs to"
+    },
+    "No readset to add jobs to": {
+      "Type": "Pass",
+      "End": true
+    },
+    "fastq needs unarchiving": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Next": "Launch unarchiving",
+          "Condition": "{% \"hasActiveReadSet\" in $unsatisfiedRequirements %}",
+          "Comment": "Is Active Readset in unsatisfied requirements"
+        }
+      ],
+      "Default": "Launch requirements"
+    },
+    "Launch requirements": {
+      "Type": "Parallel",
+      "Branches": [
+        {
+          "StartAt": "Needs QC",
+          "States": {
+            "Needs QC": {
+              "Type": "Choice",
+              "Choices": [
+                {
+                  "Next": "Launch QC",
+                  "Condition": "{% \"hasQc\" in $unsatisfiedRequirements %}"
+                }
+              ],
+              "Default": "Pass"
+            },
+            "Launch QC": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::lambda:invoke",
+              "Output": "{% $states.result.Payload %}",
+              "Arguments": {
+                "FunctionName": "${__launch_requirement_job_lambda_function_arn__}",
+                "Payload": {
+                  "fastqListRowId": "{% $fastqListRowId %}",
+                  "requirementType": "hasQc"
+                }
+              },
+              "Retry": [
+                {
+                  "ErrorEquals": [
+                    "Lambda.ServiceException",
+                    "Lambda.AWSLambdaException",
+                    "Lambda.SdkClientException",
+                    "Lambda.TooManyRequestsException"
+                  ],
+                  "IntervalSeconds": 1,
+                  "MaxAttempts": 3,
+                  "BackoffRate": 2,
+                  "JitterStrategy": "FULL"
+                }
+              ],
+              "End": true
+            },
+            "Pass": {
+              "Type": "Pass",
+              "End": true
+            }
+          }
+        },
+        {
+          "StartAt": "Needs Fingerprint",
+          "States": {
+            "Needs Fingerprint": {
+              "Type": "Choice",
+              "Choices": [
+                {
+                  "Next": "Launch Fingerprint",
+                  "Condition": "{% \"hasFingerprint\" in $unsatisfiedRequirements %}"
+                }
+              ],
+              "Default": "Pass (2)"
+            },
+            "Launch Fingerprint": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::lambda:invoke",
+              "Output": "{% $states.result.Payload %}",
+              "Arguments": {
+                "FunctionName": "${__launch_requirement_job_lambda_function_arn__}",
+                "Payload": {
+                  "fastqListRowId": "{% $fastqListRowId %}",
+                  "requirementType": "hasFingerprint"
+                }
+              },
+              "Retry": [
+                {
+                  "ErrorEquals": [
+                    "Lambda.ServiceException",
+                    "Lambda.AWSLambdaException",
+                    "Lambda.SdkClientException",
+                    "Lambda.TooManyRequestsException"
+                  ],
+                  "IntervalSeconds": 1,
+                  "MaxAttempts": 3,
+                  "BackoffRate": 2,
+                  "JitterStrategy": "FULL"
+                }
+              ],
+              "End": true
+            },
+            "Pass (2)": {
+              "Type": "Pass",
+              "End": true
+            }
+          }
+        },
+        {
+          "StartAt": "Needs Compression Information",
+          "States": {
+            "Needs Compression Information": {
+              "Type": "Choice",
+              "Choices": [
+                {
+                  "Next": "Launch Compression Information",
+                  "Condition": "{% \"hasFileCompressionInformation\" in $unsatisfiedRequirements %}"
+                }
+              ],
+              "Default": "Pass (1)"
+            },
+            "Launch Compression Information": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::lambda:invoke",
+              "Output": "{% $states.result.Payload %}",
+              "Arguments": {
+                "FunctionName": "${__launch_requirement_job_lambda_function_arn__}",
+                "Payload": {
+                  "fastqListRowId": "{% $fastqListRowId %}",
+                  "requirementType": "hasFileCompressionInformation"
+                }
+              },
+              "Retry": [
+                {
+                  "ErrorEquals": [
+                    "Lambda.ServiceException",
+                    "Lambda.AWSLambdaException",
+                    "Lambda.SdkClientException",
+                    "Lambda.TooManyRequestsException"
+                  ],
+                  "IntervalSeconds": 1,
+                  "MaxAttempts": 3,
+                  "BackoffRate": 2,
+                  "JitterStrategy": "FULL"
+                }
+              ],
+              "End": true
+            },
+            "Pass (1)": {
+              "Type": "Pass",
+              "End": true
+            }
+          }
+        }
+      ],
+      "End": true
+    },
+    "Launch unarchiving": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Output": "{% $states.result.Payload %}",
+      "Arguments": {
+        "FunctionName": "${__launch_requirement_job_lambda_function_arn__}",
+        "Payload": {
+          "fastqListRowId": "{% $fastqListRowId %}",
+          "requirementType": "hasActiveReadSet"
+        }
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2,
+          "JitterStrategy": "FULL"
+        }
+      ],
+      "End": true
+    }
+  },
+  "QueryLanguage": "JSONata"
+}

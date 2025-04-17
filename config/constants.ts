@@ -961,3 +961,8 @@ export const fastqUnarchivingEventDetailType = {
   updateJob: 'FastqUnarchivingJobUpdated',
 };
 export const fastqUnarchivingManagerEventSource = 'orcabus.fastqunarchivingmanager';
+
+/*
+Fastq sync service
+*/
+export const fastqSyncEventDetailType = 'fastqSync';
