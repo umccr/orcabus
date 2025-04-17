@@ -174,7 +174,7 @@
                         "S": "{% $string($states.input.library) %}"
                       },
                       "expire_at": {
-                        "N": "{% $round(($millis() + (30 * 24 * 60 * 60 * 1000)) / 1000) %}"
+                        "N": "{% $string($round(($millis() + (30 * 24 * 60 * 60 * 1000)) / 1000)) %}"
                       }
                     }
                   },
@@ -436,7 +436,7 @@
                                               "S": "{% $string($fastqObject) %}"
                                             },
                                             "expire_at": {
-                                              "N": "{% $round(($millis() + (30 * 24 * 60 * 60 * 1000)) / 1000) %}"
+                                              "N": "{% $string($round(($millis() + (30 * 24 * 60 * 60 * 1000)) / 1000)) %}"
                                             }
                                           }
                                         },
@@ -525,7 +525,7 @@
                                                     "S": "{% $string($states.input.fileObject) %}"
                                                   },
                                                   "expire_at": {
-                                                    "N": "{% $round(($millis() + (30 * 24 * 60 * 60 * 1000)) / 1000) %}"
+                                                    "N": "{% $string($round(($millis() + (30 * 24 * 60 * 60 * 1000)) / 1000)) %}"
                                                   }
                                                 }
                                               },
@@ -827,7 +827,7 @@
                                 "S": "{% $string($states.input.workflowRunObject) %}"
                               },
                               "expire_at": {
-                                "N": "{% $round(($millis() + (30 * 24 * 60 * 60 * 1000)) / 1000) %}"
+                                "N": "{% $string($round(($millis() + (30 * 24 * 60 * 60 * 1000)) / 1000)) %}"
                               }
                             }
                           },
@@ -1057,7 +1057,7 @@
                                             "S": "{% $string($states.input.fileObject) %}"
                                           },
                                           "expire_at": {
-                                            "N": "{% $round(($millis() + (30 * 24 * 60 * 60 * 1000)) / 1000) %}"
+                                            "N": "{% $string($round(($millis() + (30 * 24 * 60 * 60 * 1000)) / 1000)) %}"
                                           }
                                         }
                                       },
