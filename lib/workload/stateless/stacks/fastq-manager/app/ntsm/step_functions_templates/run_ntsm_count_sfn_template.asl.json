@@ -1,0 +1,153 @@
+{
+  "Comment": "A description of my state machine",
+  "StartAt": "Set env vars",
+  "States": {
+    "Set env vars": {
+      "Type": "Pass",
+      "Assign": {
+        "jobId": "{% $states.input.jobId %}",
+        "fastqId": "{% $states.input.fastqId %}",
+        "ntsmBucket": "${__ntsm_bucket__}",
+        "ntsmKey": "{% '${__ntsm_prefix__}' & $now('year=[Y0001]/month=[M01]/day=[D01]/') & $states.context.Execution.Name & '/' & $states.input.fastqId & '.ntsm' %}"
+      },
+      "Next": "Get fastq object and s3 objects"
+    },
+    "Get fastq object and s3 objects": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Output": "{% $states.result.Payload %}",
+      "Arguments": {
+        "FunctionName": "${__get_fastq_object_with_s3_objs_lambda_function_arn__}",
+        "Payload": "{% $states.input %}"
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2,
+          "JitterStrategy": "FULL"
+        }
+      ],
+      "Next": "Run Ntsm",
+      "Assign": {
+        "s3Objs": "{% $states.result.Payload.s3Objs %}"
+      }
+    },
+    "Run Ntsm": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::ecs:runTask.sync",
+      "Arguments": {
+        "LaunchType": "FARGATE",
+        "Cluster": "${__ntsm_count_cluster_arn__}",
+        "TaskDefinition": "${__ntsm_count_task_definition_arn__}",
+        "NetworkConfiguration": {
+          "AwsvpcConfiguration": {
+            "Subnets": "{% $split('${__subnets__}', ',') %}",
+            "SecurityGroups": "{% [ '${__security_group__}' ] %}"
+          }
+        },
+        "Overrides": {
+          "ContainerOverrides": [
+            {
+              "Name": "${__ntsm_count_container_name__}",
+              "Environment": [
+                {
+                  "Name": "R1_INPUT_URI",
+                  "Value": "{% $s3Objs[0].s3Uri %}"
+                },
+                {
+                  "Name": "R2_INPUT_URI",
+                  "Value": "{% $s3Objs[1] != null ? $s3Objs[1].s3Uri : null %}"
+                },
+                {
+                  "Name": "OUTPUT_URI",
+                  "Value": "{% 's3://' & $ntsmBucket & '/' & $ntsmKey %}"
+                },
+                {
+                  "Name": "NTSM_THREADS",
+                  "Value": "4"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "Next": "Update fastq object",
+      "Assign": {
+        "jobStatus": "SUCCEEDED"
+      },
+      "Catch": [
+        {
+          "ErrorEquals": ["States.ALL"],
+          "Assign": {
+            "jobStatus": "FAILED"
+          },
+          "Next": "Update job object"
+        }
+      ]
+    },
+    "Update fastq object": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Output": "{% $states.result.Payload %}",
+      "Arguments": {
+        "FunctionName": "${__update_fastq_object_lambda_function_arn__}",
+        "Payload": {
+          "fastqId": "{% $fastqId %}",
+          "ntsm": {
+            "s3Uri": "{% 's3://' & $ntsmBucket & '/' & $ntsmKey %}"
+          }
+        }
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2,
+          "JitterStrategy": "FULL"
+        }
+      ],
+      "Next": "Update job object"
+    },
+    "Update job object": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Output": "{% $states.result.Payload %}",
+      "Arguments": {
+        "FunctionName": "${__update_job_object_lambda_function_arn__}",
+        "Payload": {
+          "jobId": "{% $jobId %}",
+          "jobStatus": "{% $jobStatus %}"
+        }
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2,
+          "JitterStrategy": "FULL"
+        }
+      ],
+      "End": true
+    }
+  },
+  "QueryLanguage": "JSONata"
+}

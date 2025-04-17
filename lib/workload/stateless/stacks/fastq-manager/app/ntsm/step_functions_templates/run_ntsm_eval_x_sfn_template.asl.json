@@ -1,0 +1,173 @@
+{
+  "Comment": "A description of my state machine",
+  "StartAt": "Save variables",
+  "States": {
+    "Save variables": {
+      "Type": "Pass",
+      "Next": "Get fastq list row objects in set",
+      "Assign": {
+        "fastqSetId": "{% $states.input.fastqSetId %}"
+      }
+    },
+    "Get fastq list row objects in set": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Arguments": {
+        "FunctionName": "${__get_fastq_objects_in_fastq_set_lambda_function_arn__}",
+        "Payload": {
+          "fastqSetId": "{% $fastqSetId %}"
+        }
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2,
+          "JitterStrategy": "FULL"
+        }
+      ],
+      "Next": "For each object in fastq set x (a)",
+      "Assign": {
+        "fastqListRows": "{% $states.result.Payload.fastqListRows %}"
+      }
+    },
+    "For each object in fastq set x (a)": {
+      "Type": "Map",
+      "Items": "{% $fastqListRows %}",
+      "ItemSelector": {
+        "fastqListRowAIter": "{% $states.context.Map.Item.Value %}",
+        "fastqListRowBsIter": "{% /* https://try.jsonata.org/4GeNhyuVY */\n[\n  $filter($fastqListRows, function($var, $index){\n    $index > $states.context.Map.Item.Index\n  })\n] %}"
+      },
+      "ItemProcessor": {
+        "ProcessorConfig": {
+          "Mode": "INLINE"
+        },
+        "StartAt": "Set vars inside map",
+        "States": {
+          "Set vars inside map": {
+            "Type": "Pass",
+            "Next": "For each object in fastq set x (b)",
+            "Assign": {
+              "fastqListRowAIter": "{% $states.input.fastqListRowAIter %}",
+              "fastqListRowIdAIter": "{% $states.input.fastqListRowAIter.id %}",
+              "fastqListRowBsIter": "{% $states.input.fastqListRowBsIter %}"
+            }
+          },
+          "For each object in fastq set x (b)": {
+            "Type": "Map",
+            "Items": "{% $fastqListRowBsIter %}",
+            "ItemSelector": {
+              "fastqListRowAIter": "{% $fastqListRowAIter %}",
+              "fastqListRowBIter": "{% $states.context.Map.Item.Value %}"
+            },
+            "ItemProcessor": {
+              "ProcessorConfig": {
+                "Mode": "INLINE"
+              },
+              "StartAt": "Set vars inside map 2",
+              "States": {
+                "Set vars inside map 2": {
+                  "Type": "Pass",
+                  "Next": "Get ntsm evaluation",
+                  "Assign": {
+                    "fastqListRowIdBIter": "{% $states.input.fastqListRowBIter.id %}",
+                    "fastqListRowNtsmA": "{% $states.input.fastqListRowAIter.ntsm.s3Uri %}",
+                    "fastqListRowNtsmB": "{% $states.input.fastqListRowBIter.ntsm.s3Uri %}"
+                  }
+                },
+                "Get ntsm evaluation": {
+                  "Type": "Task",
+                  "Resource": "arn:aws:states:::lambda:invoke",
+                  "Arguments": {
+                    "FunctionName": "${__ntsm_evaluation_lambda_function_arn__}",
+                    "Payload": {
+                      "ntsmS3UriA": "{% $fastqListRowNtsmA %}",
+                      "ntsmS3UriB": "{% $fastqListRowNtsmB %}"
+                    }
+                  },
+                  "Retry": [
+                    {
+                      "ErrorEquals": [
+                        "Lambda.ServiceException",
+                        "Lambda.AWSLambdaException",
+                        "Lambda.SdkClientException",
+                        "Lambda.TooManyRequestsException"
+                      ],
+                      "IntervalSeconds": 1,
+                      "MaxAttempts": 3,
+                      "BackoffRate": 2,
+                      "JitterStrategy": "FULL"
+                    }
+                  ],
+                  "Next": "Save outputs",
+                  "Output": {
+                    "undetermined": "{% $states.result.Payload.undetermined %}",
+                    "relatedness": "{% $states.result.Payload.relatedness %}",
+                    "sameSample": "{% $states.result.Payload.sameSample %}",
+                    "score": "{% $states.result.Payload.score %}"
+                  }
+                },
+                "Save outputs": {
+                  "Type": "Pass",
+                  "End": true,
+                  "Output": {
+                    "fastqListRowIdA": "{% $fastqListRowIdAIter %}",
+                    "fastqListRowIdB": "{% $fastqListRowIdBIter %}",
+                    "undetermined": "{% $states.input.undetermined %}",
+                    "relatedness": "{% $states.input.relatedness %}",
+                    "sameSample": "{% $states.input.sameSample %}",
+                    "score": "{% $states.input.score %}"
+                  }
+                }
+              }
+            },
+            "End": true
+          }
+        }
+      },
+      "Next": "Flatten outputs"
+    },
+    "Flatten outputs": {
+      "Type": "Pass",
+      "Next": "Summarise outputs",
+      "Output": {
+        "relatednessList": "{% /* https://try.jsonata.org/E_k-T0ULX */\n[ $reduce($reduce($states.input, $append), $append) ] %}"
+      }
+    },
+    "Summarise outputs": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Arguments": {
+        "FunctionName": "${__summarise_outputs_lambda_function_arn__}",
+        "Payload": {
+          "relatednessList": "{% $states.input.relatednessList %}"
+        }
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2,
+          "JitterStrategy": "FULL"
+        }
+      ],
+      "Output": {
+        "related": "{% $states.result.Payload.related %}"
+      },
+      "End": true
+    }
+  },
+  "QueryLanguage": "JSONata"
+}

@@ -1,0 +1,261 @@
+{
+  "Comment": "A description of my state machine",
+  "StartAt": "Set env vars",
+  "States": {
+    "Set env vars": {
+      "Type": "Pass",
+      "Next": "Get s3 objects in fastq list row",
+      "Assign": {
+        "jobId": "{% $states.input.jobId %}",
+        "fastqId": "{% $states.input.fastqId %}",
+        "cacheBucket": "${__fastq_manager_cache_bucket__}",
+        "cachePrefix": "{% '${__fastq_manager_cache_prefix__}' & $now('year=[Y0001]/month=[M01]/day=[D01]/') & $states.context.Execution.Name & '/' %}"
+      }
+    },
+    "Get s3 objects in fastq list row": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Arguments": {
+        "FunctionName": "${__get_fastq_object_with_s3_objs_lambda_function_arn__}",
+        "Payload": {
+          "fastqId": "{% $fastqId %}"
+        }
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2,
+          "JitterStrategy": "FULL"
+        }
+      ],
+      "Next": "For each object",
+      "Assign": {
+        "s3Objs": "{% $states.result.Payload.s3Objs %}"
+      }
+    },
+    "For each object": {
+      "Type": "Map",
+      "ItemProcessor": {
+        "ProcessorConfig": {
+          "Mode": "INLINE"
+        },
+        "StartAt": "Set env vars inside map",
+        "States": {
+          "Set env vars inside map": {
+            "Type": "Pass",
+            "Next": "Get file metadata per file",
+            "Assign": {
+              "s3Object": "{% $states.input.s3Object %}",
+              "gzipFileSizeOutputKey": "{% $cachePrefix & $states.input.s3Object.ingestId & '_gzip_file_size.txt' %}",
+              "md5sumFileSizeOutputKey": "{% $cachePrefix & $states.input.s3Object.ingestId & '_raw_md5sum.txt' %}"
+            }
+          },
+          "Get file metadata per file": {
+            "Type": "Parallel",
+            "Branches": [
+              {
+                "StartAt": "Get gzip file size in bytes",
+                "States": {
+                  "Get gzip file size in bytes": {
+                    "Type": "Task",
+                    "Resource": "arn:aws:states:::ecs:runTask.sync",
+                    "Arguments": {
+                      "LaunchType": "FARGATE",
+                      "Cluster": "${__gzip_file_compression_cluster_arn__}",
+                      "TaskDefinition": "${__gzip_file_compression_task_definition_arn__}",
+                      "NetworkConfiguration": {
+                        "AwsvpcConfiguration": {
+                          "Subnets": "{% $split('${__gzip_subnets__}', ',') %}",
+                          "SecurityGroups": "{% [ '${__security_group__}' ] %}"
+                        }
+                      },
+                      "Overrides": {
+                        "ContainerOverrides": [
+                          {
+                            "Name": "${__gzip_file_size_in_bytes_container_name__}",
+                            "Environment": [
+                              {
+                                "Name": "READ_INPUT_URI",
+                                "Value": "{% $s3Object.s3Uri %}"
+                              },
+                              {
+                                "Name": "OUTPUT_URI",
+                                "Value": "{% 's3://' & $cacheBucket & '/' & $gzipFileSizeOutputKey %}"
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    },
+                    "Next": "Get gzip file size output contents"
+                  },
+                  "Get gzip file size output contents": {
+                    "Type": "Task",
+                    "Arguments": {
+                      "Bucket": "{% $cacheBucket %}",
+                      "Key": "{% $gzipFileSizeOutputKey %}"
+                    },
+                    "Resource": "arn:aws:states:::aws-sdk:s3:getObject",
+                    "End": true,
+                    "Output": "{% $number($trim($states.result.Body)) %}"
+                  }
+                }
+              },
+              {
+                "StartAt": "Get raw md5sum",
+                "States": {
+                  "Get raw md5sum": {
+                    "Type": "Task",
+                    "Resource": "arn:aws:states:::ecs:runTask.sync",
+                    "Arguments": {
+                      "LaunchType": "FARGATE",
+                      "Cluster": "${__md5sum_file_compression_cluster_arn__}",
+                      "TaskDefinition": "${__md5sum_file_compression_task_definition_arn__}",
+                      "NetworkConfiguration": {
+                        "AwsvpcConfiguration": {
+                          "Subnets": "{% $split('${__md5sum_subnets__}', ',') %}",
+                          "SecurityGroups": "{% [ '${__security_group__}' ] %}"
+                        }
+                      },
+                      "Overrides": {
+                        "ContainerOverrides": [
+                          {
+                            "Name": "${__raw_md5sum_container_name__}",
+                            "Environment": [
+                              {
+                                "Name": "READ_INPUT_URI",
+                                "Value": "{% $s3Object.s3Uri %}"
+                              },
+                              {
+                                "Name": "OUTPUT_URI",
+                                "Value": "{% 's3://' & $cacheBucket & '/' & $md5sumFileSizeOutputKey %}"
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    },
+                    "Next": "Get raw md5sum output contents"
+                  },
+                  "Get raw md5sum output contents": {
+                    "Type": "Task",
+                    "Arguments": {
+                      "Bucket": "{% $cacheBucket %}",
+                      "Key": "{% $md5sumFileSizeOutputKey %}"
+                    },
+                    "Resource": "arn:aws:states:::aws-sdk:s3:getObject",
+                    "End": true,
+                    "Output": "{% $trim($states.result.Body) %}"
+                  }
+                }
+              }
+            ],
+            "Next": "Set outputs of map iter"
+          },
+          "Set outputs of map iter": {
+            "Type": "Pass",
+            "End": true,
+            "Output": {
+              "gzipFileSize": "{% $states.input[0] %}",
+              "rawMd5sum": "{% $states.input[1] %}"
+            }
+          }
+        }
+      },
+      "Next": "Make fileCompression Info Payload",
+      "Items": "{% $s3Objs %}",
+      "ItemSelector": {
+        "s3Object": "{% $states.context.Map.Item.Value %}"
+      }
+    },
+    "Make fileCompression Info Payload": {
+      "Type": "Pass",
+      "Next": "Update databases",
+      "Output": {
+        "compressionFormat": "{% /* https://try.jsonata.org/adzyWTw80 */\n$substring($s3Objs[0].s3Uri, -$length('.ora')) = '.ora' ? 'ORA' : 'GZIP' %}",
+        "r1GzipCompressionSizeInBytes": "{% $states.input[0].gzipFileSize %}",
+        "r2GzipCompressionSizeInBytes": "{% /* https://try.jsonata.org/9QJyut6g5 */\n$states.input[1] != null ? $states.input[1].gzipFileSize : null %}",
+        "r1RawMd5sum": "{% $states.input[0].rawMd5sum %}",
+        "r2RawMd5sum": "{% $states.input[1].rawMd5sum %}"
+      }
+    },
+    "Update databases": {
+      "Type": "Parallel",
+      "Branches": [
+        {
+          "StartAt": "Update fastq object",
+          "States": {
+            "Update fastq object": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::lambda:invoke",
+              "Output": "{% $states.result.Payload %}",
+              "Arguments": {
+                "FunctionName": "${__update_fastq_object_lambda_function_arn__}",
+                "Payload": {
+                  "fastqId": "{% $fastqId %}",
+                  "fileCompressionInformation": "{% $states.input %}"
+                }
+              },
+              "Retry": [
+                {
+                  "ErrorEquals": [
+                    "Lambda.ServiceException",
+                    "Lambda.AWSLambdaException",
+                    "Lambda.SdkClientException",
+                    "Lambda.TooManyRequestsException"
+                  ],
+                  "IntervalSeconds": 1,
+                  "MaxAttempts": 3,
+                  "BackoffRate": 2,
+                  "JitterStrategy": "FULL"
+                }
+              ],
+              "End": true
+            }
+          }
+        },
+        {
+          "StartAt": "Update job object",
+          "States": {
+            "Update job object": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::lambda:invoke",
+              "Output": "{% $states.result.Payload %}",
+              "Arguments": {
+                "FunctionName": "${__update_job_object_lambda_function_arn__}",
+                "Payload": {
+                  "jobId": "{% $jobId %}",
+                  "jobStatus": "SUCCEEDED"
+                }
+              },
+              "Retry": [
+                {
+                  "ErrorEquals": [
+                    "Lambda.ServiceException",
+                    "Lambda.AWSLambdaException",
+                    "Lambda.SdkClientException",
+                    "Lambda.TooManyRequestsException"
+                  ],
+                  "IntervalSeconds": 1,
+                  "MaxAttempts": 3,
+                  "BackoffRate": 2,
+                  "JitterStrategy": "FULL"
+                }
+              ],
+              "End": true
+            }
+          }
+        }
+      ],
+      "End": true
+    }
+  },
+  "QueryLanguage": "JSONata"
+}

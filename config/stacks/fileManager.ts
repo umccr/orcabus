@@ -18,6 +18,7 @@ import {
   oncoanalyserBucket,
   region,
   vpcProps,
+  ntsmBucket,
 } from '../constants';
 
 export const fileManagerBuckets = (stage: AppStage): string[] => {
@@ -27,6 +28,8 @@ export const fileManagerBuckets = (stage: AppStage): string[] => {
     eventSourceBuckets.push(icav2ArchiveAnalysisBucket[stage]);
     eventSourceBuckets.push(icav2ArchiveFastqBucket[stage]);
   }
+  eventSourceBuckets.push(ntsmBucket[stage]);
+
   return eventSourceBuckets;
 };
 

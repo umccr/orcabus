@@ -1,0 +1,57 @@
+services:
+  dynamodb-local:
+    command: "-jar DynamoDBLocal.jar -sharedDb -dbPath ./data -port ${DYNAMODB_PORT}"
+    image: "amazon/dynamodb-local:latest"
+    container_name: dynamodb-local
+    ports:
+      - "${DYNAMODB_PORT}:${DYNAMODB_PORT}"
+    volumes:
+      - "./docker/dynamodb:/home/dynamodblocal/data:rw"
+    working_dir: /home/dynamodblocal
+    environment:
+      - AWS_ACCESS_KEY_ID=dummyaccesskey
+      - AWS_SECRET_ACCESS_KEY=dummysecretkey
+      - REGION=us-east-1
+      - AWS_REGION=us-east-1
+      - AWS_DEFAULT_REGION=us-east-1
+    user: "1000:1000"
+    network_mode: host
+  fastapi:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        PORT: "${FASTQ_MANAGER_API_PORT}"
+    container_name: fastq-manager
+    ports:
+      - "${FASTQ_MANAGER_API_PORT}:${FASTQ_MANAGER_API_PORT}"
+    volumes:
+      - "./app/api:/code/api"
+    environment:
+      # DynamoDB settings
+      - DYNAMODB_HOST=http://localhost:${DYNAMODB_PORT}
+      - DYNAMODB_FASTQ_LIST_ROW_TABLE_NAME=fastq_list_row
+      - DYNAMODB_FASTQ_SET_TABLE_NAME=fastq_set
+      - DYNAMODB_FASTQ_JOB_TABLE_NAME=fastq_job
+      # AWS Dummy vars
+      - AWS_ACCESS_KEY_ID=dummyaccesskey
+      - AWS_SECRET_ACCESS_KEY=dummysecretkey
+      - REGION=us-east-1
+      - AWS_REGION=us-east-1
+      - AWS_DEFAULT_REGION=us-east-1
+      # EventBridge env vars
+      - EVENT_BUS_NAME=local
+      - EVENT_SOURCE=fastq.manager
+      - EVENT_DETAIL_TYPE_CREATE_FASTQ_LIST_ROW=FastqListRowCreate
+      - EVENT_DETAIL_TYPE_UPDATE_FASTQ_LIST_ROW=FastqListRowUpdate
+      - EVENT_DETAIL_TYPE_DELETE_FASTQ_LIST_ROW=FastqListRowDelete
+      - EVENT_DETAIL_TYPE_CREATE_FASTQ_SET=FastqSetCreate
+      - EVENT_DETAIL_TYPE_UPDATE_FASTQ_SET=FastqSetUpdate
+      - EVENT_DETAIL_TYPE_MERGE_FASTQ_SET=FastqSetMerge
+      - EVENT_DETAIL_TYPE_DELETE_FASTQ_SET=FastqSetDelete
+      # SSM Parameter Store env vars
+      - FASTQ_BASE_URL=http://localhost:${FASTQ_MANAGER_API_PORT}/
+    depends_on:
+      - dynamodb-local
+    # Set when required to access localhost for services such as the filemanager
+    network_mode: host

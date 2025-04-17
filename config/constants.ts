@@ -88,6 +88,11 @@ export const icav2PipelineCacheBucket: Record<AppStage, string> = {
   [AppStage.GAMMA]: 'pipeline-stg-cache-503977275616-ap-southeast-2',
   [AppStage.PROD]: 'pipeline-prod-cache-503977275616-ap-southeast-2',
 };
+export const icav2PipelineCachePrefix: Record<AppStage, string> = {
+  [AppStage.BETA]: 'byob-icav2/development/',
+  [AppStage.GAMMA]: 'byob-icav2/staging/',
+  [AppStage.PROD]: 'byob-icav2/production/',
+};
 
 // The test inventory bucket for dev.
 export const fileManagerInventoryBucket: Record<AppStage.BETA, string> = {
@@ -892,3 +897,42 @@ export const oraDecompressionIcav2ReadyEventSource = 'orcabus.workflowmanager';
 export const oraDecompressionIcav2EventSource = 'orcabus.oradecompression';
 export const oraDecompressionIcav2EventDetailType = 'FastqListRowDecompressed';
 export const oraDecompressionStateMachinePrefix = 'oraDecompressionSfn';
+
+/*
+Fastq Manager
+*/
+
+// Tables
+export const fastqListRowTableName = 'fastqManagerDynamoDBTable';
+export const fastqSetTableName = 'fastqSetDynamoDBTable';
+export const fastqJobTableName = 'fastqJobDynamoDBTable';
+
+// Table indexes
+export const fastqListRowManagerIndexes = [
+  'rgid_ext',
+  'instrument_run_id',
+  'library_orcabus_id',
+  'fastq_set_id',
+];
+export const fastqSetManagerIndexes = ['rgid_ext', 'instrument_run_id', 'library_orcabus_id'];
+export const fastqJobManagerIndexes = ['fastq_id', 'job_type', 'status'];
+
+// S3 Buckets
+export const fastqManagerCacheBucket: Record<AppStage, string> = {
+  [AppStage.BETA]: `fastq-manager-cache-${accountIdAlias.beta}-ap-southeast-2`,
+  [AppStage.GAMMA]: `fastq-manager-cache-${accountIdAlias.gamma}-ap-southeast-2`,
+  [AppStage.PROD]: `fastq-manager-cache-${accountIdAlias.prod}-ap-southeast-2`,
+};
+
+export const ntsmBucket: Record<AppStage, string> = {
+  [AppStage.BETA]: `ntsm-fingerprints-${accountIdAlias.beta}-ap-southeast-2`,
+  [AppStage.GAMMA]: `ntsm-fingerprints-${accountIdAlias.gamma}-ap-southeast-2`,
+  [AppStage.PROD]: `ntsm-fingerprints-${accountIdAlias.prod}-ap-southeast-2`,
+};
+
+// Events
+export const fastqManagerEventSource = 'orcabus.fastqmanager';
+export const fastqManagerEventDetails = {
+  updateFastqListRow: 'FastqListRowStateChange',
+  updateFastqSet: 'FastqSetStateChange',
+};

@@ -19,6 +19,7 @@ import { HttpLambdaIntegration } from 'aws-cdk-lib/aws-apigatewayv2-integrations
 import { InventoryFunction } from './constructs/functions/inventory';
 import { NamedLambdaRole } from '../../../../components/named-lambda-role';
 import { Role } from 'aws-cdk-lib/aws-iam';
+import { NagSuppressions } from 'cdk-nag';
 
 export const FILEMANAGER_SERVICE_NAME = 'filemanager';
 export const FILEMANAGER_INGEST_ID_TAG_NAME = 'umccr-org:OrcaBusFileManagerIngestId';
@@ -104,6 +105,18 @@ export class Filemanager extends Stack {
     this.createInventoryFunction(props);
 
     this.domainName = this.createApiFunction(props);
+
+    // CDK Nag suppression (IAM5)
+    NagSuppressions.addResourceSuppressions(
+      this.ingestRole,
+      [
+        {
+          id: 'AwsSolutions-IAM5',
+          reason: 'Role needs access to bucket so this will result in a wildcard policy.',
+        },
+      ],
+      true
+    );
   }
 
   private createRole(name: string, id: string) {
