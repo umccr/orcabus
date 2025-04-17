@@ -17,6 +17,7 @@ import {
   icav2ArchiveAnalysisBucket,
   icav2ArchiveFastqBucket,
   icav2PipelineCacheBucket,
+  ntsmBucket,
   oncoanalyserBucket,
   rdsMasterSecretName,
   vpcProps,
@@ -159,6 +160,13 @@ export const getEventSourceConstructProps = (stage: AppStage): EventSourceProps 
       patterns: eventSourcePattern(),
     });
   }
+
+  // Add the ntsm bucket rule
+  props.rules.push({
+    bucket: ntsmBucket[stage],
+    eventTypes,
+    patterns: eventSourcePattern(),
+  });
 
   return props;
 };

@@ -79,6 +79,7 @@ import { PgDDStack, PgDDStackProps } from './stacks/pg-dd/deploy/stack';
 import { DataMigrateStack, DataMigrateStackProps } from './stacks/data-migrate/deploy/stack';
 import { HtsgetStack, HtsgetStackConfigurableProps } from './stacks/htsget/stack';
 import { SampleSheetCheckerStackProps } from './stacks/sample-sheet-check/stack';
+import { FastqManagerStack, FastqManagerStackProps } from './stacks/fastq-manager/deploy/stack';
 
 export interface StatelessStackCollectionProps {
   metadataManagerStackProps: MetadataManagerStackProps;
@@ -107,6 +108,7 @@ export interface StatelessStackCollectionProps {
   htsgetProps: HtsgetStackConfigurableProps;
   sampleSheetCheckerProps: SampleSheetCheckerStackProps;
   pgDDProps?: PgDDStackProps;
+  fastqManagerStackProps: FastqManagerStackProps;
 }
 
 export class StatelessStackCollection {
@@ -137,6 +139,7 @@ export class StatelessStackCollection {
   readonly htsgetStack: Stack;
   readonly pgDDStack: Stack;
   readonly sampleSheetCheckerStack: Stack;
+  readonly fastqManagerStack: Stack;
 
   constructor(
     scope: Construct,
@@ -296,6 +299,7 @@ export class StatelessStackCollection {
       ...this.createTemplateProps(env, 'WorkflowManagerStack'),
       ...statelessConfiguration.workflowManagerStackProps,
     });
+
     this.stackyMcStackFaceStack = new GlueStack(scope, 'StackyMcStackFaceStack', {
       ...this.createTemplateProps(env, 'StackyMcStackFaceStack'),
       ...statelessConfiguration.stackyMcStackFaceProps,
@@ -330,6 +334,11 @@ export class StatelessStackCollection {
         ...statelessConfiguration.pgDDProps,
       });
     }
+
+    this.fastqManagerStack = new FastqManagerStack(scope, 'FastqManagerStack', {
+      ...this.createTemplateProps(env, 'FastqManagerStack'),
+      ...statelessConfiguration.fastqManagerStackProps,
+    });
   }
 
   /**

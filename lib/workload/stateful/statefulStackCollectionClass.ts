@@ -66,6 +66,10 @@ import {
   OraCompressionIcav2PipelineTableStackProps,
 } from './stacks/ora-decompression-dynamodb/deploy/stack';
 import { AccessKeySecret, AccessKeySecretStackProps } from './stacks/access-key-secret';
+import {
+  FastqManagerTable,
+  FastqManagerTableStackProps,
+} from './stacks/fastq-manager-db/deploy/stack';
 
 export interface StatefulStackCollectionProps {
   dataBucketStackProps: DataBucketStackProps;
@@ -88,6 +92,7 @@ export interface StatefulStackCollectionProps {
   oncoanalyserPipelineTableStackProps: OncoanalyserNfPipelineTableStackProps;
   sashPipelineTableStackProps: SashNfPipelineTableStackProps;
   accessKeySecretStackProps: AccessKeySecretStackProps;
+  fastqManagerTableStackProps: FastqManagerTableStackProps;
 }
 
 export class StatefulStackCollection {
@@ -113,6 +118,7 @@ export class StatefulStackCollection {
   readonly oncoanalyserPipelineTableStack: Stack;
   readonly sashPipelineTableStack: Stack;
   readonly accessKeySecretStack: Stack;
+  readonly fastqManagerTableStack: Stack;
 
   constructor(
     scope: Construct,
@@ -265,6 +271,11 @@ export class StatefulStackCollection {
     this.accessKeySecretStack = new AccessKeySecret(scope, 'AccessKeySecretStack', {
       ...this.createTemplateProps(env, 'AccessKeySecretStack'),
       ...statefulConfiguration.accessKeySecretStackProps,
+    });
+
+    this.fastqManagerTableStack = new FastqManagerTable(scope, 'FastqManagerTableStack', {
+      ...this.createTemplateProps(env, 'FastqManagerTableStack'),
+      ...statefulConfiguration.fastqManagerTableStackProps,
     });
   }
 
