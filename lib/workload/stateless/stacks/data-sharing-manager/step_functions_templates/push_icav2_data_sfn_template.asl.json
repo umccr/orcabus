@@ -1,0 +1,72 @@
+{
+  "QueryLanguage": "JSONata",
+  "Comment": "A description of my state machine",
+  "StartAt": "Query and collect prefixes",
+  "States": {
+    "Query and collect prefixes": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Arguments": {
+        "FunctionName": "${__query_and_collect_icav2_prefixes_lambda_function_arn__}",
+        "Payload": {
+          "jobId": "{% $states.input.jobId %}",
+          "pushLocation": "{% $states.input.pushLocation %}"
+        }
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2,
+          "JitterStrategy": "FULL"
+        }
+      ],
+      "Next": "For each destination and source uri pair",
+      "Output": {
+        "destinationAndSourceUriMappingsList": "{% $states.result.Payload.destinationAndSourceUriMappingsList %}"
+      }
+    },
+    "For each destination and source uri pair": {
+      "Type": "Map",
+      "Items": "{% $states.input.destinationAndSourceUriMappingsList %}",
+      "ItemSelector": {
+        "destinationUriMapIter": "{% $states.context.Map.Item.Value.destinationUri %}",
+        "sourceUriMapIter": "{% $states.context.Map.Item.Value.sourceUri %}"
+      },
+      "ItemProcessor": {
+        "ProcessorConfig": {
+          "Mode": "INLINE"
+        },
+        "StartAt": "Run ICAv2 Sync",
+        "States": {
+          "Run ICAv2 Sync": {
+            "Type": "Task",
+            "Resource": "arn:aws:states:::events:putEvents.waitForTaskToken",
+            "Arguments": {
+              "Entries": [
+                {
+                  "Detail": {
+                    "taskToken": "{% $states.context.Task.Token %}",
+                    "sourceUri": "{% $states.input.sourceUriMapIter %}",
+                    "destinationUri": "{% $states.input.destinationUriMapIter %}"
+                  },
+                  "DetailType": "${__event_detail_type__}",
+                  "EventBusName": "${__event_bus_name__}",
+                  "Source": "${__event_source__}"
+                }
+              ]
+            },
+            "End": true
+          }
+        }
+      },
+      "End": true
+    }
+  }
+}

@@ -973,3 +973,46 @@ ICAv2 ProjectData Copy Manager Stack
 export const icav2DataCopyManagerDynamodbTableName = 'icav2DataCopyManagerDynamoDBTable';
 export const icav2DataCopyEventSource = 'orcabus.icav2datacopymanager';
 export const icav2DataCopySyncDetailType = 'ICAv2DataCopySync';
+
+/*
+Data Sharing Stack
+*/
+export const dataSharingEventsSource = 'orcabus.datasharing';
+export const dataSharingPackageEventsDetailType = {
+  createPackageJob: 'DataSharingPackageJobCreated',
+  updatePackageJob: 'DataSharingPackageJobUpdated',
+};
+export const dataSharingPushEventsDetailType = {
+  createPushJob: 'DataSharingPushJobCreated',
+  updatePushJob: 'DataSharingPushJobUpdated',
+};
+
+/*
+Fastq glue
+*/
+export const fastqGlueEventsSource = 'orcabus.fastqglue';
+export const fastqGlueEventsDetailType = 'FastqSetsCreated';
+
+/*
+Data sharing - need this in constants since the bucket will be read by the filemanager
+*/
+export const dataSharingCacheBucket: Record<AppStage, string> = {
+  [AppStage.BETA]: `data-sharing-artifacts-${accountIdAlias.beta}-ap-southeast-2`,
+  [AppStage.GAMMA]: `data-sharing-artifacts-${accountIdAlias.gamma}-ap-southeast-2`,
+  [AppStage.PROD]: `data-sharing-artifacts-${accountIdAlias.prod}-ap-southeast-2`,
+};
+
+/*
+Data mart - need this in constants as some services will need access to the bucket
+*/
+export const dataMartAthenaS3BucketName: Record<AppStage, string> = {
+  [AppStage.BETA]: `orcahouse-staging-data-${accountIdAlias.beta}`,
+  [AppStage.GAMMA]: `orcahouse-staging-data-${accountIdAlias.gamma}`,
+  [AppStage.PROD]: `orcahouse-staging-data-${accountIdAlias.prod}`,
+};
+export const dataMartAthenaS3Prefix = 'athena-query-results';
+
+export const dataMartAthenaWorkgroup = 'orcahouse';
+export const dataMartAthenaDataSource = 'orcavault';
+export const dataMartAthenaDatabase = 'mart';
+export const dataMartAthenaLambdaFunctionName = 'orcavault';

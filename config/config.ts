@@ -80,6 +80,11 @@ import {
   getIcav2DataCopyManagerStackProps,
   getIcav2DataCopyManagerTableStackProps,
 } from './stacks/icav2DataCopyManager';
+import {
+  getDataSharingS3AndTableStackProps,
+  getDataSharingStackProps,
+} from './stacks/dataSharingManager';
+import { getFastqGlueStackProps } from './stacks/fastqGlue';
 
 interface EnvironmentConfig {
   name: string;
@@ -125,6 +130,7 @@ export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null 
       fastqUnarchivingManagerTableStackProps: getFastqUnarchivingManagerTableStackProps(),
       fastqSyncManagerTableStackProps: getFastqSyncManagerTableStackProps(),
       icav2DataCopyTableStackProps: getIcav2DataCopyManagerTableStackProps(),
+      dataSharingS3AndTableStackProps: getDataSharingS3AndTableStackProps(stage),
     },
     statelessConfig: {
       metadataManagerStackProps: getMetadataManagerStackProps(stage),
@@ -159,6 +165,7 @@ export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null 
       fastqUnarchivingManagerStackProps: getFastqUnarchivingManagerStackProps(stage),
       fastqSyncManagerStackProps: getFastqSyncManagerStackProps(stage),
       icav2DataCopyManagerStackProps: getIcav2DataCopyManagerStackProps(stage),
+      dataSharingStackProps: getDataSharingStackProps(stage),
     },
   };
 
