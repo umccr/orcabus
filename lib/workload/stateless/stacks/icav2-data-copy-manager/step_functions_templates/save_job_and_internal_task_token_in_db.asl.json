@@ -1,0 +1,26 @@
+{
+  "QueryLanguage": "JSONata",
+  "Comment": "A description of my state machine",
+  "StartAt": "DynamoDB PutItem",
+  "States": {
+    "DynamoDB PutItem": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:putItem",
+      "Arguments": {
+        "TableName": "${__table_name__}",
+        "Item": {
+          "id": {
+            "S": "{% $states.input.jobId %}"
+          },
+          "id_type": {
+            "S": "JOB_ID"
+          },
+          "task_token": {
+            "S": "{% $states.input.taskToken %}"
+          }
+        }
+      },
+      "End": true
+    }
+  }
+}

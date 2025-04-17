@@ -1,0 +1,107 @@
+{
+  "QueryLanguage": "JSONata",
+  "Comment": "A description of my state machine",
+  "StartAt": "Wait 5",
+  "States": {
+    "Wait 5": {
+      "Type": "Wait",
+      "Seconds": 5,
+      "Next": "Get Inputs from Payload"
+    },
+    "Get Inputs from Payload": {
+      "Type": "Pass",
+      "Next": "Get Job ID from DB",
+      "Assign": {
+        "jobId": "{% $states.input.id %}",
+        "status": "{% $states.input.status %}"
+      }
+    },
+    "Get Job ID from DB": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:getItem",
+      "Arguments": {
+        "TableName": "${__table_name__}",
+        "Key": {
+          "id": "{% $jobId %}",
+          "id_type": "JOB_ID"
+        }
+      },
+      "Next": "Job ID in DB",
+      "Assign": {
+        "jobIdInDb": "{% $states.result.Item != null ? true : false %}",
+        "taskToken": "{% $states.result.Item != null ? $states.result.Item.task_token.S : null %}"
+      }
+    },
+    "Job ID in DB": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Next": "Job Status",
+          "Condition": "{% $jobIdInDb %}",
+          "Comment": "Job ID in DataBase"
+        }
+      ],
+      "Default": "Not in DB"
+    },
+    "Job Status": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Next": "Send Task Success",
+          "Condition": "{% $status = 'SUCCEEDED' %}",
+          "Comment": "Job Succeeded"
+        },
+        {
+          "Next": "Non-Terminal Status",
+          "Condition": "{% $status in ['INITIALIZED','WAITING_FOR_RESOURCES', 'RUNNING'] %}",
+          "Comment": "Job Still Running"
+        }
+      ],
+      "Default": "Send Task Failure"
+    },
+    "Send Task Success": {
+      "Type": "Task",
+      "Arguments": {
+        "Output": {
+          "jobId": "{% $jobId %}",
+          "status": "{% $status %}"
+        },
+        "TaskToken": "{% $taskToken %}"
+      },
+      "Resource": "arn:aws:states:::aws-sdk:sfn:sendTaskSuccess",
+      "Next": "Delete Job ID from Database",
+      "Catch": [
+        {
+          "ErrorEquals": ["Sfn.TaskTimedOutException"],
+          "Next": "Not in DB"
+        }
+      ]
+    },
+    "Delete Job ID from Database": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::dynamodb:deleteItem",
+      "Arguments": {
+        "TableName": "${__table_name__}",
+        "Key": {
+          "id": "{% $jobId %}",
+          "id_type": "JOB_ID"
+        }
+      },
+      "End": true
+    },
+    "Send Task Failure": {
+      "Type": "Task",
+      "Arguments": {
+        "TaskToken": "{% $taskToken %}"
+      },
+      "Resource": "arn:aws:states:::aws-sdk:sfn:sendTaskFailure",
+      "Next": "Delete Job ID from Database"
+    },
+    "Not in DB": {
+      "Type": "Succeed"
+    },
+    "Non-Terminal Status": {
+      "Type": "Succeed"
+    }
+  }
+}

@@ -966,3 +966,10 @@ export const fastqUnarchivingManagerEventSource = 'orcabus.fastqunarchivingmanag
 Fastq sync service
 */
 export const fastqSyncEventDetailType = 'fastqSync';
+
+/*
+ICAv2 ProjectData Copy Manager Stack
+*/
+export const icav2DataCopyManagerDynamodbTableName = 'icav2DataCopyManagerDynamoDBTable';
+export const icav2DataCopyEventSource = 'orcabus.icav2datacopymanager';
+export const icav2DataCopySyncDetailType = 'ICAv2DataCopySync';
