@@ -82,7 +82,6 @@ import {
   Icav2DataCopyManagerTable,
   Icav2DataCopyManagerTableStackProps,
 } from './stacks/icav2-data-copy-manager-dynamo-db/deploy';
-import { DataSharingStack } from '../stateless/stacks/data-sharing-manager/deploy/stack';
 import {
   DataSharingS3AndTableStack,
   DataSharingS3AndTableStackProps,
