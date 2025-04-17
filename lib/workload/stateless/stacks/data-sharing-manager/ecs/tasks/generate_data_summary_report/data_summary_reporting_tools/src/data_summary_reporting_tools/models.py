@@ -82,7 +82,7 @@ class LibraryModel(pa.DataFrameModel):
         "tumor", "normal", "negative-control"
     ])
     workflow: str = pa.Field()
-    quality: str = pa.Field()
+    quality: Optional[str] = pa.Field(nullable=True)
     type: str = pa.Field()
     assay: str = pa.Field()
     coverage: float = pa.Field(ge=0, coerce=True)

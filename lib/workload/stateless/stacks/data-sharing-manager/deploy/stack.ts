@@ -327,7 +327,7 @@ export class DataSharingStack extends Stack {
     // Add container to task role
     const dataSummaryReportContainer = taskDefinition.addContainer('dataSummaryReportContainer', {
       image: ecs.ContainerImage.fromDockerImageAsset(
-        new ecrAssets.DockerImageAsset(this, 'gzipRawMd5sum', {
+        new ecrAssets.DockerImageAsset(this, 'data_summary_reporter', {
           directory: path.join(__dirname, '../ecs/tasks/generate_data_summary_report'),
           buildArgs: {
             TARGETPLATFORM: architecture.dockerPlatform,
