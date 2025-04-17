@@ -15,7 +15,7 @@ export class FastqSyncManagerTable extends cdk.Stack {
     /*
     Initialise dynamodb table, where id_type is the primary sort key
     */
-    const dynamodbTable = new DynamodbPartitionedPipelineConstruct(this, 'fastq_sync_table', {
+    new DynamodbPartitionedPipelineConstruct(this, 'fastq_sync_table', {
       tableName: props.dynamodbTableName,
     });
   }
