@@ -9,7 +9,7 @@ import {
   bsshFastqCopyManagerEventSource,
   bsshFastqCopyManagerEventDetailType,
 } from '../constants';
-import { BsshIcav2FastqCopyManagerConfig } from '../../lib/workload/stateless/stacks/bssh-icav2-fastq-copy-manager/deploy/stack';
+import { BsshIcav2FastqCopyManagerConfig } from '../../lib/workload/stateless/stacks/bssh-icav2-fastq-copy-manager/deploy/interfaces';
 
 export const getBsshIcav2FastqCopyManagerStackProps = (
   stage: AppStage

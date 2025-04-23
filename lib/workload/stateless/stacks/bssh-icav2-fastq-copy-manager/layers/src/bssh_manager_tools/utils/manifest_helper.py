@@ -87,7 +87,7 @@ def generate_run_manifest(
     """
     Generate run manifest
     :param root_run_uri: Use this to get the relative path for each file list to be added to the run manifest
-    :param project_data_list: list of projectdata objects
+    :param project_data_list: list of project data objects
     :param output_project_id: The output project id to extend the path to
     :param output_folder_path: Path
     :return: run manifest
@@ -104,8 +104,11 @@ def generate_run_manifest(
         # Get the source file uri
         # The source file uri is the path to the file in the input project
         # The source file will not be on byob storage.
-        source_file_uri = convert_project_data_obj_to_uri(file_obj_iter, uri_type=UriType.ICAV2)
-        
+        source_file_uri = convert_project_data_obj_to_uri(
+            file_obj_iter,
+            uri_type=UriType.ICAV2
+        )
+
         # Get the output path (which is the parent directory)
         dest_uri_path = get_destination_uri_path(
             root_output_path=root_output_path,

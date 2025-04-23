@@ -32,7 +32,7 @@ import pandas as pd
 import logging
 
 # Wrapica imports
-from wrapica.enums import DataType
+from wrapica.enums import DataType, UriType
 from wrapica.libica_models import ProjectData
 from wrapica.project_data import (
     get_project_data_obj_by_id,
@@ -41,7 +41,6 @@ from wrapica.project_data import (
     convert_project_id_and_data_path_to_uri,
     convert_uri_to_project_data_obj
 )
-from wrapica.storage_configuration import convert_icav2_uri_to_s3_uri
 
 # Local imports
 from bssh_manager_tools.utils.manifest_helper import generate_run_manifest, get_dest_uri_from_src_uri
@@ -70,11 +69,11 @@ def handler(event, context):
 
     # Get the BCLConvert analysis ID
     logger.info("Collecting the analysis id and project context")
-    project_id = event['project_id']
-    analysis_id = event['analysis_id']
+    project_id = event['projectId']
+    analysis_id = event['analysisId']
 
     logger.info("Collect the output uri prefix")
-    output_uri = event['output_uri']
+    output_uri = event['outputUri']
     dest_project_data_obj = convert_uri_to_project_data_obj(
         output_uri,
         create_data_if_not_found=True
@@ -138,8 +137,8 @@ def handler(event, context):
     bclconvert_output_data_list = list(
         filter(
             lambda data_obj:
-                (
-                    # File is inside 'output' directory
+            (
+                # File is inside 'output' directory
                     data_obj.data.details.path.startswith(
                         str(bcl_convert_output_path) + "/"
                     ) and
@@ -148,10 +147,12 @@ def handler(event, context):
                         # This file is just a list of presigned urls that will expire in a week
                         data_obj.data.details.name.endswith("fastq_list_s3.csv")
                     )
-                ),
+            ),
             bclconvert_output_data_list
         )
     )
+
+    # List non-recursively so we can add these as uris to the output dict
 
     # Get fastq list csv
     logger.info("Getting the fastq list csv file")
@@ -183,21 +184,6 @@ def handler(event, context):
             }
         )
 
-    # Generate the manifest output for all files in the output directory
-    # to link to the standard output path from the run id
-    logger.info("Generating the run manifest file")
-    run_root_uri = convert_project_id_and_data_path_to_uri(
-        project_id,
-        bcl_convert_output_path,
-        DataType.FOLDER
-    )
-    run_manifest: Dict = generate_run_manifest(
-        root_run_uri=run_root_uri,
-        project_data_list=bclconvert_output_data_list,
-        output_project_id=dest_project_id,
-        output_folder_path=dest_folder_path
-    )
-
     for read_num in [1, 2]:
         fastq_list_rows_df[f"Read{read_num}FileUriDest"] = fastq_list_rows_df[f"Read{read_num}FileUriSrc"].apply(
             lambda src_uri: get_dest_uri_from_src_uri(
@@ -207,14 +193,6 @@ def handler(event, context):
                 dest_folder_path
             ) + Path(urlparse(src_uri).path).name
         )
-
-    # Sanitise the manifest file - make sure theres no Path objects in there
-    run_manifest = dict(
-        map(
-            lambda kv: (kv[0], list(map(str, kv[1]))),
-            run_manifest.items()
-        )
-    )
 
     # Get the fastq list rows data frame
     fastq_list_rows_df = (
@@ -241,43 +219,27 @@ def handler(event, context):
     fastq_list_rows_df_list = fastq_list_rows_df.to_dict(orient='records')
 
     # Convert interop files to uris and add to the run manifest
-    interops_as_uri = dict(
+    interops_as_uri = list(
         map(
             lambda interop_iter: (
                 convert_project_id_and_data_path_to_uri(
                     project_id,
                     Path(interop_iter.data.details.path),
                     data_type=DataType.FILE
-                ),
-                [
-                    convert_project_id_and_data_path_to_uri(
-                        dest_project_id,
-                        (
-                                dest_folder_path /
-                                Path(interop_iter.data.details.path).parent.relative_to(
-                                    input_run_folder_obj.data.details.path
-                                )
-                        ),
-                        data_type=DataType.FOLDER
-                    )
-                ]
+                )
             ),
             interop_files
         )
     )
 
-    # Add interops to the run manifest
-    run_manifest.update(
-        interops_as_uri
-    )
-
     # Check IndexMetricsOut.bin exists in the Interop files
     # Otherwise copy across from Reports output from BCLConvert
+    index_metrics_uri = None
     try:
         _ = next(
             filter(
                 lambda interop_uri_iter: Path(urlparse(interop_uri_iter).path).name == 'IndexMetricsOut.bin',
-                interops_as_uri.keys()
+                interops_as_uri
             )
         )
     except StopIteration:
@@ -288,22 +250,46 @@ def handler(event, context):
             data_type=DataType.FILE
         )
 
-        # Append InterOp directory to list of outputs for IndexMetricsOut.bin
-        run_manifest[index_metrics_uri].append(
-            convert_project_id_and_data_path_to_uri(
-                dest_project_id,
-                dest_folder_path / "InterOp",
-                data_type=DataType.FOLDER
-            )
-        )
-
     logger.info("Outputting the manifest and fastq list rows")
 
     return {
-        "manifest_b64gz": compress_dict(run_manifest),
-        "fastq_list_rows_b64gz": compress_dict(fastq_list_rows_df_list),
+        "icav2CopyJobList": [
+            # Samples and Report directories
+            {
+                "sourceUriList": [
+                    # Samples
+                    convert_project_id_and_data_path_to_uri(
+                        project_id=bcl_convert_output_obj.project_id,
+                        data_path=bcl_convert_output_obj.data.details.path + "Samples",
+                        data_type=DataType.FOLDER,
+                    ),
+                    # Reports
+                    convert_project_id_and_data_path_to_uri(
+                        project_id=bcl_convert_output_obj.project_id,
+                        data_path=bcl_convert_output_obj.data.details.path + "Reports",
+                        data_type=DataType.FOLDER,
+                    )
+                ],
+                "destinationUri": convert_project_id_and_data_path_to_uri(
+                    project_id=dest_project_data_obj.project_id,
+                    data_path=Path(dest_project_data_obj.data.details.path),
+                    data_type=DataType.FOLDER,
+                    uri_type=UriType.ICAV2
+                ),
+            },
+            # InterOp Directory (copied on a per-file level)
+            {
+                "sourceUriList": interops_as_uri + ([index_metrics_uri] if index_metrics_uri else []),
+                "destinationUri": convert_project_id_and_data_path_to_uri(
+                    project_id=dest_project_data_obj.project_id,
+                    data_path=dest_project_data_obj.data.details.path + "InterOp",
+                    data_type=DataType.FOLDER,
+                    uri_type=UriType.ICAV2
+                )
+            }
+        ],
+        "fastqListRowsB64gz": compress_dict(fastq_list_rows_df_list),
     }
-
 
 # if __name__ == "__main__":
 #     from os import environ
