@@ -686,7 +686,7 @@ export class DataSharingStack extends Stack {
     // https://docs.aws.amazon.com/step-functions/latest/dg/connect-stepfunctions.html#sync-async-iam-policies
     // Polling requires permission for states:DescribeExecution
     NagSuppressions.addResourceSuppressions(
-      s3PushStateMachine,
+      [s3PushStateMachine, distributedMapPolicy],
       [
         {
           id: 'AwsSolutions-IAM5',
