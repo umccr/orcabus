@@ -54,6 +54,8 @@ def handler(event, context) -> Dict[str, List[Dict[str, str]]]:
     # Extract the jobId and pushLocation from the event
     job_id = event.get("packagingJobId")
     push_location = event.get("pushLocation")
+    count_only = event.get("countOnly", False)
+    pagination_index = event.get("paginationIndex", None)
 
     # Check if the jobId and pushLocation are provided
     if not job_id or not push_location:
@@ -108,6 +110,41 @@ def handler(event, context) -> Dict[str, List[Dict[str, str]]]:
             }
         )
 
+    destination_and_source_uri_mappings_list.sort(
+        key=lambda x: x["destinationUri"]
+    )
+
+    # If count only is true, return the count of the destination and source uri mappings list
+    if count_only:
+        return {
+            "listCount": len(destination_and_source_uri_mappings_list)
+        }
+
+    if pagination_index:
+        return {
+            "destinationAndSourceUriMappingsList": destination_and_source_uri_mappings_list[pagination_index[0]:pagination_index[1]+1]
+        }
+
     return {
         "destinationAndSourceUriMappingsList": destination_and_source_uri_mappings_list
     }
+
+
+# if __name__ == "__main__":
+#     import json
+#     from os import environ
+#
+#     environ['AWS_PROFILE'] = 'umccr-production'
+#     environ['PACKAGING_TABLE_NAME'] = 'data-sharing-packaging-lookup-table'
+#     environ['CONTENT_INDEX_NAME'] = 'content-index'
+#
+#     print(
+#         handler(
+#             {
+#                 "packagingJobId": "pkg.01JS1553E52WEZ43CXVYRSPM5N",
+#                 "pushLocation": "s3://radio-fastq-landing/2025-04-17-cttsov2/",
+#                 "paginationList": [0, 23],
+#             },
+#             None
+#         )
+#     )

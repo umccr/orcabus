@@ -5,7 +5,7 @@
   "States": {
     "Set Vars": {
       "Type": "Pass",
-      "Next": "Query and collect prefixes",
+      "Next": "Query and collect prefixes Count",
       "Assign": {
         "packagingJobId": "{% $states.input.packagingJobId %}",
         "pushLocation": "{% $states.input.pushLocation %}",
@@ -14,17 +14,16 @@
         "s3StepsCopyCsvKey": "{% '${__aws_s3_copy_steps_prefix__}' & $states.context.Execution.Name & '.__index__.csv' %}"
       }
     },
-    "Query and collect prefixes": {
+    "Query and collect prefixes Count": {
       "Type": "Task",
       "Resource": "arn:aws:states:::lambda:invoke",
-      "Output": {
-        "destinationAndSourceUriMappingsList": "{% $states.result.Payload.destinationAndSourceUriMappingsList %}"
-      },
+      "Output": {},
       "Arguments": {
         "FunctionName": "${__get_s3_destination_and_source_uri_mappings_lambda_function_arn__}",
         "Payload": {
           "packagingJobId": "{% $packagingJobId %}",
-          "pushLocation": "{% $pushLocation %}"
+          "pushLocation": "{% $pushLocation %}",
+          "countOnly": true
         }
       },
       "Retry": [
@@ -41,44 +40,57 @@
           "JitterStrategy": "FULL"
         }
       ],
-      "Next": "For each destination and source mapping uri"
+      "Next": "For each destination and source mapping uri",
+      "Assign": {
+        "listCount": "{% $states.result.Payload.listCount %}"
+      }
     },
     "For each destination and source mapping uri": {
       "Type": "Map",
-      "Items": "{% $states.input.destinationAndSourceUriMappingsList %}",
-      "ItemSelector": {
-        "destinationUriMapIter": "{% $states.context.Map.Item.Value.destinationUri %}",
-        "sourceUrisListMapIter": "{% $states.context.Map.Item.Value.sourceUrisList %}",
-        "s3StepsCopyBucket": "{% $s3StepsCopyBucket %}",
-        "s3StepsCopyKeyMapIter": "{% /* https://try.jsonata.org/mZnjTty1- */ $replace($s3StepsCopyCsvKey, '__index__', $string($states.context.Map.Item.Index)) %}"
+      "Items": "{% [$map([0..$listCount], function($v, $i, $a) { $i })] %}",
+      "ItemBatcher": {
+        "MaxItemsPerBatch": 100,
+        "BatchInput": {
+          "packagingJobIdMapIter": "{% $packagingJobId %}",
+          "pushLocationMapIter": "{% $pushLocation %}",
+          "pushJobExecutionArnMapIter": "{% $pushJobExecutionArn %}",
+          "s3StepsCopyBucketMapIter": "{% $s3StepsCopyBucket %}",
+          "s3StepsCopyCsvKeyMapIter": "{% $s3StepsCopyCsvKey %}",
+          "s3StepsCopyKeyMapIter": "{% $s3StepsCopyCsvKey %}"
+        }
       },
       "ItemProcessor": {
         "ProcessorConfig": {
-          "Mode": "INLINE"
+          "Mode": "DISTRIBUTED",
+          "ExecutionType": "STANDARD"
         },
-        "StartAt": "Set vars in map",
+        "StartAt": "Set vars in distributed map",
         "States": {
-          "Set vars in map": {
+          "Set vars in distributed map": {
             "Type": "Pass",
-            "Next": "Generate steps function csv and upload to s3",
+            "Next": "Query and collect prefixes from Pagination",
             "Assign": {
-              "destinationBucketMapIter": "{% $replace($states.input.destinationUriMapIter, /^s3:\\/\\/(.*?)\\/(?:.*)/, \"$1\") %}",
-              "destinationKeyMapIter": "{% $replace($states.input.destinationUriMapIter, /^s3:\\/\\/(?:.*?)\\/(.*)/, \"$1\") & '/' %}",
-              "sourceUrisListMapIter": "{% $states.input.sourceUrisListMapIter %}",
-              "s3StepsCopyBucketMapIter": "{% $states.input.s3StepsCopyBucket %}",
-              "s3StepsCopyKeyMapIter": "{% $states.input.s3StepsCopyKeyMapIter %}"
+              "packagingJobIdMapIter": "{% $states.input.BatchInput.packagingJobIdMapIter %}",
+              "pushLocationMapIter": "{% $states.input.BatchInput.pushLocationMapIter %}",
+              "pushJobExecutionArnMapIter": "{% $states.input.BatchInput.pushJobExecutionArnMapIter %}",
+              "s3StepsCopyBucketMapIter": "{% $states.input.BatchInput.s3StepsCopyBucketMapIter %}",
+              "s3StepsCopyCsvKeyMapIter": "{% $states.input.BatchInput.s3StepsCopyCsvKeyMapIter %}",
+              "itemRangeMin": "{% $states.input.Items[0] %}",
+              "itemRangeMax": "{% $states.input.Items[-1] %}"
             }
           },
-          "Generate steps function csv and upload to s3": {
+          "Query and collect prefixes from Pagination": {
             "Type": "Task",
             "Resource": "arn:aws:states:::lambda:invoke",
-            "Output": "{% $states.result.Payload %}",
+            "Output": {
+              "destinationAndSourceUriMappingsList": "{% $states.result.Payload.destinationAndSourceUriMappingsList %}"
+            },
             "Arguments": {
-              "FunctionName": "${__create_csv_for_s3_steps_copy_lambda_function_arn__}",
+              "FunctionName": "${__get_s3_destination_and_source_uri_mappings_lambda_function_arn__}",
               "Payload": {
-                "sourceUrisList": "{% $sourceUrisListMapIter %}",
-                "s3StepsCopyBucket": "{% $s3StepsCopyBucketMapIter %}",
-                "s3StepsCopyKey": "{% $s3StepsCopyKeyMapIter %}"
+                "packagingJobId": "{% $packagingJobIdMapIter %}",
+                "pushLocation": "{% $pushLocationMapIter %}",
+                "paginationIndex": ["{% $itemRangeMin %}", "{% $itemRangeMax %}"]
               }
             },
             "Retry": [
@@ -95,26 +107,84 @@
                 "JitterStrategy": "FULL"
               }
             ],
-            "Next": "Run s3 copy"
+            "Next": "Map destination and source mapping list"
           },
-          "Run s3 copy": {
-            "Type": "Task",
-            "Resource": "arn:aws:states:::states:startExecution.sync:2",
-            "Arguments": {
-              "StateMachineArn": "${__aws_s3_steps_copy_sfn_arn__}",
-              "Input": {
-                "sourceFilesCsvKey": "{% $s3StepsCopyKeyMapIter %}",
-                "destinationBucket": "{% $destinationBucketMapIter %}",
-                "destinationPrefixKey": "{% $destinationKeyMapIter %}",
-                "maxItemsPerBatch": 1
-              }
+          "Map destination and source mapping list": {
+            "Type": "Map",
+            "Items": "{% $states.input.destinationAndSourceUriMappingsList %}",
+            "ItemSelector": {
+              "destinationUriMapIterX": "{% $states.context.Map.Item.Value.destinationUri %}",
+              "sourceUrisListMapIterX": "{% $states.context.Map.Item.Value.sourceUrisList %}",
+              "s3StepsCopyBucketMapIterX": "{% $s3StepsCopyBucketMapIter %}",
+              "s3StepsCopyKeyMapIterX": "{% /* https://try.jsonata.org/mZnjTty1- */ $replace($s3StepsCopyCsvKeyMapIter, '__index__', $string($states.context.Map.Item.Index + $itemRangeMin)) %}"
             },
-            "Output": {
-              "stepsExecutionId": "{% $states.result.ExecutionArn %}",
-              "output": "{% $states.result.Output ? $states.result.Output : null %}",
-              "error": "{% $states.result.Error ? $states.result.Error : null %}",
-              "hasError": "{% $states.result.Error ? true : false %}",
-              "errorMessage": "{% $states.result.Cause ? $states.result.Cause : null %}"
+            "ItemProcessor": {
+              "ProcessorConfig": {
+                "Mode": "INLINE"
+              },
+              "StartAt": "Set vars in map",
+              "States": {
+                "Set vars in map": {
+                  "Type": "Pass",
+                  "Assign": {
+                    "destinationBucketMapIterX": "{% $replace($states.input.destinationUriMapIterX, /^s3:\\/\\/(.*?)\\/(?:.*)/, \"$1\") %}",
+                    "destinationKeyMapIterX": "{% $replace($states.input.destinationUriMapIterX, /^s3:\\/\\/(?:.*?)\\/(.*)/, \"$1\") & '/' %}",
+                    "sourceUrisListMapIterX": "{% $states.input.sourceUrisListMapIterX %}",
+                    "s3StepsCopyBucketMapIterX": "{% $states.input.s3StepsCopyBucketMapIterX %}",
+                    "s3StepsCopyKeyMapIterX": "{% $states.input.s3StepsCopyKeyMapIterX %}"
+                  },
+                  "Next": "Generate steps function csv and upload to s3"
+                },
+                "Generate steps function csv and upload to s3": {
+                  "Type": "Task",
+                  "Resource": "arn:aws:states:::lambda:invoke",
+                  "Output": "{% $states.result.Payload %}",
+                  "Arguments": {
+                    "FunctionName": "${__create_csv_for_s3_steps_copy_lambda_function_arn__}",
+                    "Payload": {
+                      "sourceUrisList": "{% $sourceUrisListMapIterX %}",
+                      "s3StepsCopyBucket": "{% $s3StepsCopyBucketMapIterX %}",
+                      "s3StepsCopyKey": "{% $s3StepsCopyKeyMapIterX %}"
+                    }
+                  },
+                  "Retry": [
+                    {
+                      "ErrorEquals": [
+                        "Lambda.ServiceException",
+                        "Lambda.AWSLambdaException",
+                        "Lambda.SdkClientException",
+                        "Lambda.TooManyRequestsException"
+                      ],
+                      "IntervalSeconds": 1,
+                      "MaxAttempts": 3,
+                      "BackoffRate": 2,
+                      "JitterStrategy": "FULL"
+                    }
+                  ],
+                  "Next": "Run s3 copy"
+                },
+                "Run s3 copy": {
+                  "Type": "Task",
+                  "Resource": "arn:aws:states:::states:startExecution.sync:2",
+                  "Arguments": {
+                    "StateMachineArn": "${__aws_s3_steps_copy_sfn_arn__}",
+                    "Input": {
+                      "sourceFilesCsvKey": "{% $s3StepsCopyKeyMapIterX %}",
+                      "destinationBucket": "{% $destinationBucketMapIterX %}",
+                      "destinationPrefixKey": "{% $destinationKeyMapIterX %}",
+                      "maxItemsPerBatch": 1
+                    }
+                  },
+                  "Output": {
+                    "stepsExecutionId": "{% $states.result.ExecutionArn %}",
+                    "output": "{% $states.result.Output ? $states.result.Output : null %}",
+                    "error": "{% $states.result.Error ? $states.result.Error : null %}",
+                    "hasError": "{% $states.result.Error ? true : false %}",
+                    "errorMessage": "{% $states.result.Cause ? $states.result.Cause : null %}"
+                  },
+                  "End": true
+                }
+              }
             },
             "End": true
           }
@@ -124,7 +194,9 @@
       "Output": {
         "hasError": "{% /* Check if any iterable of hasError is set to true  -  https://try.jsonata.org/9IqHtAIc0 */\n$sum(\n  [\n    $map($states.result, function($resultIter){$resultIter.hasError = true ? 1 : 0})\n  ]\n) > 0 ? true : false %}",
         "errorMessages": "{% /* Check if any iterable of errorMessages exist  -  https://try.jsonata.org/rXO5p_8bH */\n(\n  $appendMessages := function($i, $j){$i & \" \" & $j};\n  $errorMessages := [\n    $filter(\n      [\n        $map($states.result, function($resultIter){\n            $resultIter.errorMessage ? $resultIter.errorMessage : null\n        })\n      ],\n      function($errorMessageIter){\n        $errorMessageIter ? $errorMessageIter : null\n      }\n    )\n  ];\n  $reduce(\n    $errorMessages,\n    $appendMessages\n  ) ? $errorMessages : null\n)\n\n %}"
-      }
+      },
+      "Label": "Foreachdestinationandsourcemappinguri",
+      "MaxConcurrency": 1
     },
     "Update job database": {
       "Type": "Task",

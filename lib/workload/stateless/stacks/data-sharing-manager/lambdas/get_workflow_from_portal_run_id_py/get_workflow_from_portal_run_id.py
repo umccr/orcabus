@@ -206,45 +206,45 @@ def handler(event, context) -> Dict[str, WorkflowRunModelSlim]:
     }
 
 
-if __name__ == "__main__":
-    from os import environ
-    import json
-
-    # Set envs
-    environ['AWS_PROFILE'] = 'umccr-production'
-    environ['AWS_REGION'] = 'ap-southeast-2'
-    environ['HOSTNAME_SSM_PARAMETER'] = '/hosted_zone/umccr/name'
-    environ['ORCABUS_TOKEN_SECRET_ID'] = 'orcabus/token-service-jwt'
-    environ['ATHENA_WORKGROUP_NAME'] = 'orcahouse'
-    environ['ATHENA_DATASOURCE_NAME'] = 'orcavault'
-    environ['ATHENA_DATABASE_NAME'] = 'mart'
-
-    print(json.dumps(
-        handler(
-            {
-                "portalRunId": "20240420746761e7"
-            },
-            None
-        ),
-        indent=4
-    ))
-
-    # {
-    #     "workflowRunObject": {
-    #         "orcabusId": "wv1.01HKGKG700SJ3EW38M7RP8K8BR",
-    #         "timestamp": "2024-01-07T00:00:00Z",
-    #         "workflowName": "umccrise",
-    #         "workflowVersion": "2.3.1--1--9344851",
-    #         "portalRunId": "202401075d94d609",
-    #         "libraries": [
-    #             {
-    #                 "libraryId": "L2301517",
-    #                 "orcabusId": "lib.01JBMVJ2EPCW8W051H82JF4MTX"
-    #             },
-    #             {
-    #                 "libraryId": "L2301512",
-    #                 "orcabusId": "lib.01JBMVJ1DQHB5HA6MP7BDYE94K"
-    #             }
-    #         ]
-    #     }
-    # }
+# if __name__ == "__main__":
+#     from os import environ
+#     import json
+#
+#     # Set envs
+#     environ['AWS_PROFILE'] = 'umccr-production'
+#     environ['AWS_REGION'] = 'ap-southeast-2'
+#     environ['HOSTNAME_SSM_PARAMETER'] = '/hosted_zone/umccr/name'
+#     environ['ORCABUS_TOKEN_SECRET_ID'] = 'orcabus/token-service-jwt'
+#     environ['ATHENA_WORKGROUP_NAME'] = 'orcahouse'
+#     environ['ATHENA_DATASOURCE_NAME'] = 'orcavault'
+#     environ['ATHENA_DATABASE_NAME'] = 'mart'
+#
+#     print(json.dumps(
+#         handler(
+#             {
+#                 "portalRunId": "20240420746761e7"
+#             },
+#             None
+#         ),
+#         indent=4
+#     ))
+#
+#     # {
+#     #     "workflowRunObject": {
+#     #         "orcabusId": "wv1.01HKGKG700SJ3EW38M7RP8K8BR",
+#     #         "timestamp": "2024-01-07T00:00:00Z",
+#     #         "workflowName": "umccrise",
+#     #         "workflowVersion": "2.3.1--1--9344851",
+#     #         "portalRunId": "202401075d94d609",
+#     #         "libraries": [
+#     #             {
+#     #                 "libraryId": "L2301517",
+#     #                 "orcabusId": "lib.01JBMVJ2EPCW8W051H82JF4MTX"
+#     #             },
+#     #             {
+#     #                 "libraryId": "L2301512",
+#     #                 "orcabusId": "lib.01JBMVJ1DQHB5HA6MP7BDYE94K"
+#     #             }
+#     #         ]
+#     #     }
+#     # }

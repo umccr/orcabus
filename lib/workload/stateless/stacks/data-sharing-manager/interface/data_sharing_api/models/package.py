@@ -12,7 +12,7 @@ from typing import Optional, ClassVar
 from dyntastic import Dyntastic
 from fastapi.encoders import jsonable_encoder
 from pydantic import Field, BaseModel, ConfigDict, model_validator, computed_field
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from enum import Enum
 
 from data_sharing_tools.utils.models import SecondaryAnalysisDataTypeEnum
@@ -157,7 +157,7 @@ class PackageResponse(PackageWithId):
     @computed_field
     def has_expired(self) -> bool:
         return (
-            True if PackageData(**self.model_dump()).is_expired()
+            True if PackageData.get(self.id).is_expired()
             else False
         )
 
@@ -230,7 +230,7 @@ class PackageData(PackageWithId, Dyntastic):
 
     def is_expired(self):
         return (
-            True if (self.request_time + timedelta(days=30)) < datetime.now()
+            True if (self.request_time + timedelta(days=30)) < datetime.now(timezone.utc)
             else False
         )
 
