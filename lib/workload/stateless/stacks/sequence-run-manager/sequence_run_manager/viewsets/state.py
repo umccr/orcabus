@@ -28,12 +28,6 @@ class StateViewSet(mixins.CreateModelMixin, mixins.UpdateModelMixin, mixins.List
     def get_queryset(self):
         return State.objects.filter(sequence=self.kwargs["orcabus_id"])
     
-    @extend_schema(responses=OpenApiTypes.OBJECT, description="Valid states map for new state creation, update")
-    @action(detail=False, methods=['get'], url_name='valid_states_map', url_path='valid_states_map')
-    def get_valid_states_map(self, request, **kwargs):
-        return Response(self.valid_states_map)
-
-    
     def create(self, request, *args, **kwargs):
         """
         Create a customed new state for a sequence run.

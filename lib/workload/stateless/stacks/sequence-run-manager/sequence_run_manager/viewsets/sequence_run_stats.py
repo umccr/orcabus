@@ -6,7 +6,7 @@ from django.db import models
 from django.db.models import Q
 
 from sequence_run_manager.models.sequence import Sequence
-from sequence_run_manager.serializers.sequence import SequenceRunCountByStatusSerializer
+from sequence_run_manager.serializers.sequence_run import SequenceRunCountByStatusSerializer
 
 
 class SequenceStatsViewSet(GenericViewSet):

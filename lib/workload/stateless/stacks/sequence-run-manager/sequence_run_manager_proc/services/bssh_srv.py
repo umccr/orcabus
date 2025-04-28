@@ -267,7 +267,26 @@ class BSSHService:
         except Exception as e:
             logger.error(f'Error getting sample sheet file: {e}')
             self.handle_request_error(e, "when getting sample sheet file")
-    
+
+    def get_all_sample_sheet_from_bssh_run_files(self, api_url: str, ) -> Optional[List[Dict[str, str]]]:
+        """
+        Get all sample sheet from BSSH run files, Sample sheet name will be start with SampleSheet.XXXXX.csv, and is csv file
+        """
+        try:
+            sample_sheet_urls = self._find_all_sample_sheet_urls(api_url)
+            sample_sheet_contents = []
+            for url in sample_sheet_urls:
+                if not url:
+                    continue
+                content = self._fetch_and_decode_file_content(url)
+                sample_sheet_contents.append({
+                    'name': url['name'],
+                    'content': content
+                })
+            return sample_sheet_contents
+        except Exception as e:
+            self.handle_request_error(e, "when getting all sample sheet from BSSH run files")
+            
     def _find_sample_sheet_url(self, api_url: str, sample_sheet_name: str) -> Optional[str]:
         """
         Find the URL of the sample sheet file in the BSSH run files
@@ -310,7 +329,50 @@ class BSSHService:
             return None
         except Exception as e:
             self.handle_request_error(e, "when getting sample sheet file content url")
+    
+    def _find_all_sample_sheet_urls(self, api_url: str, ) -> Optional[List[Dict[str, str]]]:
+        """
+        Get all sample sheet from BSSH run files, Sample sheet name will be start with SampleSheet.XXXXX.csv, and is csv file
+        """
+        try:
+            sample_sheet_urls = []
+            bssh_run_files_url = f"{api_url}/files"
+            offset = 0
+            limit = 100
+        
+            while True:
+                params = {
+                    'extension': 'csv',
+                    'directory': '/',
+                    'offset': offset,
+                    'limit': limit
+                }
             
+                response = requests.get(bssh_run_files_url, params=params, headers=self.headers)
+                response.raise_for_status()
+            
+                files = response.json().get('Items', [])
+                
+                if not files:
+                    break
+                
+                for file in files:
+                    if file['Name'].startswith('SampleSheet.'):
+                        sample_sheet_urls.append({
+                            'name': file['Name'],
+                            'url': file['HrefContent']
+                        })
+            
+                if len(files) < limit:
+                    break
+                
+                offset += limit
+        
+            return sample_sheet_urls
+        except Exception as e:
+            self.handle_request_error(e, "when getting sample sheet file content url")
+    
+    
     def _fetch_and_decode_file_content(self, content_url: str) -> Optional[str]:
         """Fetch file content and return as Jsonb format to persist in DB"""
         try:

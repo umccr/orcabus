@@ -13,6 +13,8 @@ ASSOCIATION_STATUS = "ACTIVE"
 
 def check_or_create_sequence_run_libraries_linking(payload: dict):
     """
+    This function is used to check or create sequence run libraries linking from payload
+    
     Check if libraries are linked to the sequence run;
     if not, create the linking
     """
@@ -54,6 +56,43 @@ def create_sequence_run_libraries_linking(sequence_run: Sequence):
         logger.info(f"Library associations created for sequence run {sequence_run.sequence_run_id}, linked libraries: {linked_libraries}")
     else:
         logger.info(f"No libraries found for sequence run {sequence_run.sequence_run_id}")
+
+@transaction.atomic
+def check_or_create_sequence_run_libraries_linking_from_event(event_detail: dict):
+    """
+    This function is used to check or create sequence run libraries linking from event details(SRLLC)
+    event detail payload example:
+    {
+    "sequenceOrcabusId": "seq.1234567890ABCDEFGHIJKLMN", // orcabusid for the sequence run (fake run)
+    "linkedLibraries": [
+                "L2000000",
+                "L2000001",
+                "L2000002"
+                ]
+    }
+    """
+    sequence_run = Sequence.objects.get(orcabus_id=event_detail["sequenceOrcabusId"])
+    if not sequence_run:
+        logger.error(f"Sequence run {event_detail['sequenceOrcabusId']} not found when checking or creating sequence run libraries linking")
+        raise ValueError(f"Sequence run {event_detail['sequenceOrcabusId']} not found")
+    
+    linked_libraries = event_detail["linkedLibraries"]
+    if LibraryAssociation.objects.filter(sequence=sequence_run, library_id__in=linked_libraries).exists():
+        return
+    
+    if linked_libraries:
+        for library_id in linked_libraries:
+                # create the library association
+                LibraryAssociation.objects.create(
+                    sequence=sequence_run,
+                    library_id=library_id,
+                    association_date=timezone.now(),  # Use timezone-aware datetime
+                    status=ASSOCIATION_STATUS,
+                )
+        logger.info(f"Library associations created for sequence run {sequence_run.sequence_run_id}, linked libraries: {linked_libraries}")
+    else:
+        logger.info(f"No libraries found for sequence run {sequence_run.sequence_run_id}")
+        
 
 
 # metadata manager service

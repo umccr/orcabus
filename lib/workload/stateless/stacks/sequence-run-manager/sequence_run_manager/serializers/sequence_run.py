@@ -8,17 +8,17 @@ class SequenceBaseSerializer(SerializersBase):
     pass
     
 
-class SequenceListParamSerializer(OptionalFieldsMixin, SequenceBaseSerializer):
+class SequenceRunListParamSerializer(OptionalFieldsMixin, SequenceBaseSerializer):
     class Meta(OrcabusIdSerializerMetaMixin):
         model = Sequence
         fields = "__all__"
 
-class SequenceMinSerializer(SequenceBaseSerializer):
+class SequenceRunMinSerializer(SequenceBaseSerializer):
     class Meta(OrcabusIdSerializerMetaMixin):
         model = Sequence
-        fields = ["orcabus_id", "instrument_run_id", 'experiment_name', "start_time", "end_time", "status"]
+        fields = ["orcabus_id", "instrument_run_id", "sequence_run_id", "experiment_name", "start_time", "end_time", "status"]
 
-class SequenceSerializer(SequenceBaseSerializer):
+class SequenceRunSerializer(SequenceBaseSerializer):
     libraries = serializers.ListField(read_only=True, child=serializers.CharField(), help_text="List of libraries associated with the sequence")
     
     class Meta(OrcabusIdSerializerMetaMixin):
@@ -38,3 +38,4 @@ class SequenceRunCountByStatusSerializer(serializers.Serializer):
     succeeded = serializers.IntegerField()
     failed = serializers.IntegerField()
     aborted = serializers.IntegerField()
+    resolved = serializers.IntegerField()
