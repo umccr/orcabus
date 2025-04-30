@@ -1,16 +1,10 @@
 import { Construct } from 'constructs';
 import { Stack, Environment, StackProps } from 'aws-cdk-lib';
-
 import { FilemanagerProps, Filemanager } from './stacks/filemanager/deploy/stack';
-
 import {
   MetadataManagerStack,
   MetadataManagerStackProps,
 } from './stacks/metadata-manager/deploy/stack';
-import {
-  SequenceRunManagerStack,
-  SequenceRunManagerStackProps,
-} from './stacks/sequence-run-manager/deploy/stack';
 import {
   BsshIcav2FastqCopyManagerStack,
   BsshIcav2FastqCopyManagerStackProps,
@@ -28,10 +22,6 @@ import {
   BclConvertManagerStack,
   BclConvertManagerStackProps,
 } from './stacks/bclconvert-manager/deploy/stack';
-import {
-  WorkflowManagerStack,
-  WorkflowManagerStackProps,
-} from './stacks/workflow-manager/deploy/stack';
 import { GlueStack, GlueStackProps } from './stacks/stacky-mcstackface/glue-constructs';
 import {
   WgtsQcIcav2PipelineManagerStack,
@@ -97,7 +87,6 @@ import { FastqGlueStack, FastqGlueStackProps } from './stacks/fastq-glue/deploy'
 
 export interface StatelessStackCollectionProps {
   metadataManagerStackProps: MetadataManagerStackProps;
-  sequenceRunManagerStackProps: SequenceRunManagerStackProps;
   fileManagerStackProps: FilemanagerProps;
   bsshIcav2FastqCopyManagerStackProps: BsshIcav2FastqCopyManagerStackProps;
   bclconvertInteropQcIcav2PipelineManagerStackProps: BclconvertInteropQcIcav2PipelineManagerStackProps;
@@ -115,7 +104,6 @@ export interface StatelessStackCollectionProps {
   eventSchemaStackProps: SchemaStackProps;
   dataSchemaStackProps: SchemaStackProps;
   bclConvertManagerStackProps: BclConvertManagerStackProps;
-  workflowManagerStackProps: WorkflowManagerStackProps;
   stackyMcStackFaceProps: GlueStackProps;
   fmAnnotatorProps: FMAnnotatorConfigurableProps;
   dataMigrateProps: DataMigrateStackProps;
@@ -134,7 +122,6 @@ export class StatelessStackCollection {
   // You could add more stack here and initiate it at the constructor. See example below for reference
   readonly fileManagerStack: Stack;
   readonly metadataManagerStack: Stack;
-  readonly sequenceRunManagerStack: Stack;
   readonly bsshIcav2FastqCopyManagerStack: Stack;
   readonly bclconvertInteropQcIcav2PipelineManagerStack: Stack;
   readonly cttsov2Icav2PipelineManagerStack: Stack;
@@ -151,7 +138,6 @@ export class StatelessStackCollection {
   readonly eventSchemaStack: Stack;
   readonly dataSchemaStack: Stack;
   readonly bclConvertManagerStack: Stack;
-  readonly workflowManagerStack: Stack;
   readonly stackyMcStackFaceStack: Stack;
   readonly fmAnnotator: Stack;
   readonly dataMigrate: Stack;
@@ -191,10 +177,13 @@ export class StatelessStackCollection {
       ...statelessConfiguration.metadataManagerStackProps,
     });
 
-    this.sequenceRunManagerStack = new SequenceRunManagerStack(scope, 'SequenceRunManagerStack', {
-      ...this.createTemplateProps(env, 'SequenceRunManagerStack'),
-      ...statelessConfiguration.sequenceRunManagerStackProps,
-    });
+    /**
+     * Migrated to https://github.com/orcabus
+     */
+    // this.sequenceRunManagerStack = new SequenceRunManagerStack(scope, 'SequenceRunManagerStack', {
+    //   ...this.createTemplateProps(env, 'SequenceRunManagerStack'),
+    //   ...statelessConfiguration.sequenceRunManagerStackProps,
+    // });
 
     this.bsshIcav2FastqCopyManagerStack = new BsshIcav2FastqCopyManagerStack(
       scope,
@@ -319,10 +308,13 @@ export class StatelessStackCollection {
       ...statelessConfiguration.bclConvertManagerStackProps,
     });
 
-    this.workflowManagerStack = new WorkflowManagerStack(scope, 'WorkflowManagerStack', {
-      ...this.createTemplateProps(env, 'WorkflowManagerStack'),
-      ...statelessConfiguration.workflowManagerStackProps,
-    });
+    /**
+     * Migrated to https://github.com/orcabus
+     */
+    // this.workflowManagerStack = new WorkflowManagerStack(scope, 'WorkflowManagerStack', {
+    //   ...this.createTemplateProps(env, 'WorkflowManagerStack'),
+    //   ...statelessConfiguration.workflowManagerStackProps,
+    // });
 
     this.stackyMcStackFaceStack = new GlueStack(scope, 'StackyMcStackFaceStack', {
       ...this.createTemplateProps(env, 'StackyMcStackFaceStack'),
