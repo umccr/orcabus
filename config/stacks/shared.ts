@@ -22,6 +22,7 @@ import {
   oncoanalyserBucket,
   rdsMasterSecretName,
   vpcProps,
+  externalProjectBuckets,
 } from '../constants';
 import { Duration, RemovalPolicy } from 'aws-cdk-lib';
 import { SchemaRegistryProps } from '../../lib/workload/stateful/stacks/shared/constructs/schema-registry';
@@ -174,6 +175,14 @@ export const getEventSourceConstructProps = (stage: AppStage): EventSourceProps 
     eventTypes,
     patterns: eventSourcePattern(),
   });
+
+  for (const bucket of externalProjectBuckets[stage]) {
+    props.rules.push({
+      bucket: bucket,
+      eventTypes,
+      patterns: eventSourcePattern(),
+    });
+  }
 
   return props;
 };
