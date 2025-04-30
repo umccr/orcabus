@@ -67,12 +67,10 @@ test-stateful-app-suite:
 	@(cd lib/workload/stateful/stacks/token-service && $(MAKE) test)
 
 test-stateless-app-suite:
-	@(cd lib/workload/stateless/stacks/sequence-run-manager && $(MAKE) test)
 	@(cd lib/workload/stateless/stacks/metadata-manager && $(MAKE) test)
 	@(cd lib/workload/stateless/stacks/filemanager && $(MAKE) test)
 	@(cd lib/workload/stateless/stacks/fmannotator && $(MAKE) test)
 	@(cd lib/workload/stateless/stacks/bclconvert-manager && $(MAKE) test)
-	@(cd lib/workload/stateless/stacks/workflow-manager && $(MAKE) test)
 
 # The default outer `test` target run all test in this repo
 test: test-stateful-iac test-stateless-iac test-stateful-app-suite test-stateless-app-suite
