@@ -9,6 +9,7 @@ from sequence_run_manager.viewsets.state import StateViewSet
 from sequence_run_manager.viewsets.comment import CommentViewSet
 from sequence_run_manager.viewsets.sequence_run_stats import SequenceStatsViewSet
 from sequence_run_manager.viewsets.sample_sheet import SampleSheetViewSet
+from sequence_run_manager.viewsets.sequence_run_action import SequenceRunActionViewSet
 from sequence_run_manager.settings.base import API_VERSION
 
 api_namespace = "api"
@@ -21,6 +22,9 @@ router.register(r"sequence_run", SampleSheetViewSet, basename="sequence-run-samp
 router.register("sequence_run/(?P<orcabus_id>[^/]+)/comment", CommentViewSet, basename="sequence-run-comment")
 router.register("sequence_run/(?P<orcabus_id>[^/]+)/state", StateViewSet, basename="sequence-run-states")
 router.register(r"sequence_run/stats", SequenceStatsViewSet, basename="sequence-run-stats")
+
+# Sequence Run Action
+router.register(r"sequence_run/action", SequenceRunActionViewSet, basename="sequence-run-action")
 
 # Sequence Concept (refer:https://github.com/umccr/orcabus/issues/947); sequence-runs group by instrument run id
 # future: router.register(r"sequence", SequenceViewSet, basename="sequence-run")

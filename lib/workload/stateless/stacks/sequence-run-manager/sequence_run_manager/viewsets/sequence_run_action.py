@@ -10,10 +10,10 @@ from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
 
 from drf_spectacular.types import OpenApiTypes
-from drf_spectacular.utils import extend_schema, PolymorphicProxySerializer
+from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiResponse
+from drf_spectacular.types import OpenApiTypes
 
-from sequence_run_manager.models import Sequence, Comment
-from sequence_run_manager.serializers import SequenceSerializer
+from sequence_run_manager.models import Sequence
 from sequence_run_manager.aws_event_bridge.event_srv import emit_srm_api_event
 
 from v2_samplesheet_parser.functions.retriever import retrieve_library_from_csv_samplesheet
@@ -28,10 +28,38 @@ class SequenceRunActionViewSet(ViewSet):
     """
 
     @extend_schema(
-        responses=OpenApiTypes.OBJECT,
+        request={
+            'multipart/form-data': {
+                'type': 'object',
+                'properties': {
+                    'file': {
+                        'type': 'string',
+                        'format': 'binary',
+                        'description': 'The sample sheet file to upload'
+                    },
+                    'instrument_run_id': {
+                        'type': 'string',
+                        'description': 'The instrument run ID to associate with the sample sheet'
+                    },
+                    'created_by': {
+                        'type': 'string',
+                        'description': 'The user who is creating this sample sheet'
+                    },
+                    'comment': {
+                        'type': 'string',
+                        'description': 'Comment about the sample sheet'
+                    }
+                },
+                'required': ['file', 'instrument_run_id', 'created_by', 'comment']
+            }
+        },
+        responses={
+            200: OpenApiResponse(description="Sample sheet added successfully"),
+            400: OpenApiResponse(description="Missing required fields or invalid input")
+        },
         description="Creating a fake sequence run and associate a samplesheet to it by emitting an SRSSC and/or SRLLC event to EventBridge (Orcabus)"
     )
-    @action(detail=True,methods=['post'],url_name='add_samplesheet',url_path='add_samplesheet')
+    @action(detail=False,methods=['post'],url_name='add_samplesheet',url_path='add_samplesheet')
     def add_samplesheet(self, request, *args, **kwargs):
         """
         upload sample sheet for a sequence run
