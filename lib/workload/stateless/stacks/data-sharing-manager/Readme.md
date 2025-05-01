@@ -13,7 +13,8 @@ For all three parts, we recommend using the data-sharing-tool provided.
 
 In order to generate a package, we recommend installing the data-sharing-tool by running the following command (from this directory).
 
-Please preface the command with 'bash' 
+Please preface the command with 'bash' because the `scripts/install.sh` script relies on `bash`-specific features. 
+This ensures compatibility and prevents errors if your default shell is not `bash`.
 
 ```bash
 bash scripts/install.sh
