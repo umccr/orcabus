@@ -6,7 +6,10 @@ use crate::error::Error::{ParseError, SecretsManagerError};
 use crate::error::Result;
 use aws_credential_types::provider::ProvideCredentials;
 use aws_credential_types::{provider, Credentials};
+use aws_sdk_s3::error::SdkError;
 use aws_sdk_secretsmanager as secretsmanager;
+use aws_sdk_secretsmanager::error::DisplayErrorContext;
+use aws_sdk_secretsmanager::operation::get_secret_value::GetSecretValueError;
 use aws_secretsmanager_caching::output::GetSecretValueOutputDef;
 use aws_secretsmanager_caching::SecretsManagerCachingClient;
 use base64::prelude::Engine;
@@ -38,7 +41,7 @@ impl Client {
             secretsmanager::config::Builder::from(&config),
             NonZeroUsize::new(1).expect("valid non-zero usize"),
             Duration::from_secs(900),
-            false,
+            true,
         )
         .await
         .map_err(|err| SecretsManagerError(err.to_string()))?;
@@ -89,10 +92,16 @@ impl ProvideCredentials for SecretsManagerCredentials {
 impl SecretsManagerCredentials {
     /// Construct the credentials from the secret.
     pub async fn new(id: &str, client: &Client) -> Result<Self> {
-        let secret = client
-            .get_secret(id)
-            .await
-            .map_err(|err| SecretsManagerError(format!("no valid secret {}: {}", id, err)))?;
+        let secret = client.get_secret(id).await.map_err(|err| {
+            let sdk_err: Option<&SdkError<GetSecretValueError>> = err.downcast_ref();
+            let display_err = if let Some(err) = sdk_err {
+                DisplayErrorContext(&err).to_string()
+            } else {
+                err.to_string()
+            };
+
+            SecretsManagerError(format!("no valid secret {}: {}", id, display_err))
+        })?;
 
         let secret = if let Some(string) = secret.secret_string {
             from_str(&string)?

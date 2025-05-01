@@ -36,7 +36,7 @@ export class ApiFunction extends fn.Function {
     // Allow access to the access key secret.
     this.role.addToPolicy(
       new PolicyStatement({
-        actions: ['secretsmanager:GetSecretValue'],
+        actions: ['secretsmanager:GetSecretValue', 'secretsmanager:DescribeSecret'],
         resources: [`${props.accessKeySecretArn}-*`],
       })
     );
