@@ -1016,3 +1016,15 @@ export const dataMartAthenaWorkgroup = 'orcahouse';
 export const dataMartAthenaDataSource = 'orcavault';
 export const dataMartAthenaDatabase = 'mart';
 export const dataMartAthenaLambdaFunctionName = 'orcavault';
+
+/*
+ External Projects
+*/
+export const externalProjectBuckets: Record<AppStage, string[]> = {
+  [AppStage.BETA]: [],
+  [AppStage.GAMMA]: [],
+  [AppStage.PROD]: [
+    // Project Montauk
+    'pipeline-montauk-977251586657-ap-southeast-2',
+  ],
+};

@@ -20,6 +20,7 @@ import {
   vpcProps,
   ntsmBucket,
   dataSharingCacheBucket,
+  externalProjectBuckets,
 } from '../constants';
 
 export const fileManagerBuckets = (stage: AppStage): string[] => {
@@ -31,6 +32,11 @@ export const fileManagerBuckets = (stage: AppStage): string[] => {
   }
   eventSourceBuckets.push(ntsmBucket[stage]);
   eventSourceBuckets.push(dataSharingCacheBucket[stage]);
+
+  /* Extend the event source buckets with the external project buckets */
+  for (const bucket of externalProjectBuckets[stage]) {
+    eventSourceBuckets.push(bucket);
+  }
 
   return eventSourceBuckets;
 };
