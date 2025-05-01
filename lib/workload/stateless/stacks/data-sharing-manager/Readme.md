@@ -2,81 +2,177 @@
 
 ## Description
 
-The sharing manager works two main ways, as a 'push' or 'pull' step.
+The data sharing manager is divided into three main components -
+1. Package generation
+2. Package validation
+3. Package sharing
 
-Inputs are configured into the API, and then the step function is launched.  
+For all three parts, we recommend using the data-sharing-tool provided.
 
-For pushing sharing types, if configuration has not been tried with the '--dryrun' flag first, the API will return an error. 
-This is so we don't go accidentally pushing data to the wrong place.
+### Installing the Data Sharing Tool
 
-A job will then be scheduled and ran in the background, a user can check the status of the job by checking the job status in the API.
+In order to generate a package, we recommend installing the data-sharing-tool by running the following command (from this directory).
 
+Please preface the command with 'bash' because the `scripts/install.sh` script relies on `bash`-specific features. 
+This ensures compatibility and prevents errors if your default shell is not `bash`.
 
-### Push or Pull?
+```bash
+bash scripts/install.sh
+```
 
-When pushing, we use the s3 steps copy manager to 'push' data to a bucket. We assume that we have access to this bucket.
-When pulling, we generate a presigned url containing a script that can be used to download the data.
+## Package Generation
 
+> This component expects the user to have some familiarity with AWS athena
 
-### Pushing Outputs
+We use the 'mart' tables to generate the appropriate manifests for package generation.
 
-Once a Job has completed pushing data, the job response object can be queried to gather the following information:
-* fastq data that was pushed
-* portal run ids that were pushed
-* list the s3 objects that were pushed.
+You may use the UI to generate the manifests, or you can use the command line interface as shown below.  
 
+In the example below, we collect the libraries that are associated with the project 'CUP' and the 
+sequencing run date is greater than or equal to '2025-04-01'.
 
-### Invoking a job
+We require only the lims-manifest when collecting fastq data.  
 
-The Job API launch comprises the following inputs:
+The workflow manifest (along with the lims-manifest) is required when collecting secondary analysis data.
 
-* instrumentRunIdList: The list of instrument run ids to be shared (used for fastq sharing only), can be used in tandem alongside one of the metadata attributes of libraryId, subjectId, individualId or projectId and will take an intersection of the two for fastq data.
-* libraryIdList: A list of library ids to be shared. Cannot be used alongside subjectIdList, individualIdList or projectIdList.
-* subjectIdList: A list of subject ids to share. Cannot be used alongside libraryIds, projectIdList or individualIdList.
-* projectIdList: A list of project names to share. Cannot be used alongside libraryIds, subjectIdList or individualIdList.
-* dataTypeList: A list of data types to share. Can be one or more of: 
-  * 'Fastq'
-  * 'SecondaryAnalysis'
-* defrostArchivedFastqs: A boolean flag to determine if we should de-frost archived fastqs. This is only used for fastq data types.
-  If set to true, and the fastq data is archived, the data de-frosted will be triggered but the workflow will not wait for the data to be de-frosted and will fail with a DataDefrostingError.  
-* secondaryAnalysisWorkflowList: A list of secondary analysis workflows to share, can be used in tandem with data types. 
-  The possible values are one or more of:
-  * cttsov2 (or dragen-tso500-ctdna)
-  * tumor-normal (or dragen-wgts-dna)
-  * wts (or dragen-wgts-rna)
-  * oncoanalyser-wgts-dna
-  * oncoanalyser-wgts-rna
-  * oncoanalyser-wgts-dna-rna
-  * rnasum
-  * umccrise
-  * sash
-* portalRunIdList: A list of portal run ids to share. 
-  For secondaryanalysis data types, this parameter will take precedence over any metadata specified or secondary workflow types specified.
-* portalRunIdExclusionList: A list of portal run ids NOT to share.
-  For secondaryanalysis data types, this parameter can be used in tandem with metadata or secondary workflow types specified. 
-  This is useful if a known workflow has been repeated and we do not wish to share the original.  
-* shareType: The type of share, must be one of 'push' or 'pull'
-* shareDestination: The destination of the share, only required if shareType is 'push'. Can be an 'icav2' or 's3' uri.
-* dryrun: A boolean flag, used when we set the push type to true to determine if we should actually push the data or instead just print out to the console the list of s3 objects we would have sent. 
+```bash
+WORK_GROUP="orcahouse"
+DATASOURCE_NAME="orcavault"
+DATABASE_NAME="mart"
 
+# Initialise the query
+query_execution_id="$( \
+  aws athena start-query-execution \
+      --no-cli-pager \
+      --query-string " \
+        SELECT *
+        FROM lims 
+        WHERE 
+          project_id = 'CUP' AND
+          sequencing_run_date >= CAST('2025-04-01' AS DATE)
+      " \
+      --work-group "${WORK_GROUP}" \
+      --query-execution-context "Database=${DATABASE_NAME}, Catalog=${DATASOURCE_NAME}" \
+      --output json \
+      --query 'QueryExecutionId' \
+)"
 
-### Steps Functions Output
+# Wait for the query to complete
+while true; do
+  query_state="$( \
+    aws athena get-query-execution \
+      --no-cli-pager \
+      --output json \
+      --query-execution-id "${query_execution_id}" \
+      --query 'QueryExecution.Status.State' \
+  )"
 
-* The steps function will output two attributes:
-  * limsCsv presigned url - a presigned url to download a csv file containing the lims metadata to share
-  * data-download script presigned url - a presigned url to download a bash script that can be used to download the data.
+  if [[ "${query_state}" == "SUCCEEDED" ]]; then
+    break
+  elif [[ "${query_state}" == "FAILED" || "${query_state}" == "CANCELLED" ]]; then
+    echo "Query failed or was cancelled"
+    exit 1
+  fi
 
+  sleep 5
+done
+
+# Collect the query results
+query_results_uri="$( \
+  aws athena get-query-execution \
+    --no-cli-pager \
+    --output json \
+    --query-execution-id "${query_execution_id}" \
+    --query '.QueryExecution.ResultConfiguration.OutputLocation' \
+)"
   
-### Data Download Url for Pulling Data
+# Download the results
+aws s3 cp "${query_results_uri}" ./lims_manifest.csv
+```
 
-The data download script will have the following options:
+Using the lims manifest we can now generate the package.
 
-* --data-download-path - the root path of the data to be downloaded, this directory must already exist.
-* --dryrun | --dry-run - a flag to indicate that the script should not download the data, but instead print the commands that would be run and directories that would be created.
-* --check-size-only    - a flag to skip any downloading if the existing file is the same size as the file to be downloaded.
-* --skip-existing      - a flag to skip downloading files that already exist in the destination directory (regardless of size).
-* --print-summary      - a flag to print a summary of the files that would be downloaded and the total size of the download.
+By using the `--wait` parameter, the CLI will only return once the package has been completed. 
+
+This may take around 5 mins to complete depending on the size of the package.
+
+```bash
+data-sharing-tool generate-package \
+  --lims-manifest-csv lims_manifest.csv \
+  --wait
+```
+
+This will generate a package and print the package to the console like so:
+
+```bash
+Generating package 'pkg.123456789'...
+```
+
+For the workflow manifest, we can use the same query as above, but we will need to change the final table name to 'workflow'.  
+
+An example of the SQL might be as follows:
+
+```sql
+/*
+Get the libraries associated with the project 'CUP' and their sequencing run date is greater than or equal to '2025-04-01'.
+*/
+WITH libraries AS (
+    SELECT library_id
+    FROM lims 
+    WHERE 
+      project_id = 'CUP' AND
+      sequencing_run_date >= CAST('2025-04-01' AS DATE)
+)
+/*
+Select matching TN workflows for the libraries above 
+*/
+SELECT *
+from workflow 
+WHERE 
+    workflow_name = 'tumor-normal' AND
+    library_id IN (SELECT library_id FROM libraries)
+```
 
 
+## Package Validation
 
-  
+Once the package has completed generating we can validate the package using the following command:
+
+> By using the BROWSER env var, the package report will be automatically opened up in our browser!
+
+```bash
+data-sharing-tool view-package-report \
+  --package-id pkg.12345678910
+```
+
+Look through the metadata, fastq and secondary analysis tabs to ensure that the package is correct.  
+
+
+## Package Sharing
+
+### Pushing Packages
+
+We can use the following command to push the package to a destination location.  This will generate a push job id.
+
+Like the package generation, we can use the `--wait` parameter to wait for the job to complete.
+
+```bash
+data-sharing-tool push-package \
+  --package-id pkg.12345678910 \
+  --share-location s3://bucket/path-to-prefix/
+```
+
+### Presigning packages
+
+Not all data receivers will have an S3 bucket or ICAV2 project for us to dump data in.  
+
+Therefore we also support the old-school presigned url method.  
+
+We can use the following command to generate presigned urls in a script for the package
+
+```bash
+data-sharing-tool presign-package \
+  --package-id pkg.12345678910
+```
+
+This will return a presigned url for a shell script that can be used to download the package.
