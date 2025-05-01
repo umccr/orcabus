@@ -264,6 +264,8 @@ class FastqListRowData(FastqListRowWithId, Dyntastic):
         library_description_list = [
             f"Library ID: {library_obj['libraryId']}",
             f"Sequenced on {datetime_to_hf_format(self.date)} at {self.center.value}"
+            if self.date is not None and self.center is not None
+            else "",
             f"Phenotype: {library_obj['phenotype']}" if library_obj['phenotype'] else None,
             f"Assay: {library_obj['assay']}" if library_obj['assay'] else None,
             f"Type: {library_obj['type']}" if library_obj['type'] else None,
