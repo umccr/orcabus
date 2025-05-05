@@ -445,8 +445,10 @@ class ListPackagesSubCommand(Command):
         data-sharing-tool list-packages [--package-name=<package_name>]
 
     Description:
-      List packages, you may specify the package name to filter by, this will match the
-      --package-name parameter used in the generate-package command
+      List packages, you may specify the package name to filter by,
+      you may use the --package-name parameter as you used in the generate-package command.
+      Package names are not unique so you may need to refer to time-stamps to identify the
+      correct package id.
 
     Options:
       --package-name=<package_name>  The package name to filter by
