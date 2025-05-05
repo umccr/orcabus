@@ -1143,7 +1143,16 @@
           ]
         }
       },
-      "Next": "Update Job API (packaging complete)"
+      "Next": "Update Job API (packaging complete)",
+      "Catch": [
+        {
+          "ErrorEquals": ["States.TaskFailed"],
+          "Next": "Update Job API (packaging complete)",
+          "Assign": {
+            "status": "FAILED"
+          }
+        }
+      ]
     },
     "Update Job API (packaging complete)": {
       "Type": "Task",
@@ -1153,7 +1162,7 @@
         "FunctionName": "${__update_packaging_job_api_lambda_function_arn__}",
         "Payload": {
           "jobId": "{% $packagingJobId %}",
-          "status": "SUCCEEDED"
+          "status": "{% $status ? $status : 'SUCCEEDED' %}"
         }
       },
       "Retry": [
