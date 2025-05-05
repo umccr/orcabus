@@ -327,7 +327,7 @@ def generate_package(
     package_request: PackageRequestDict = {
         "libraryIdList": library_ids,
         "dataTypeList": (
-            (["FASTQ"] if exclude_primary_data else []) +
+            (["FASTQ"] if not exclude_primary_data else []) +
             (["SECONDARY_ANALYSIS"] if workflow_manifest is not None else [])
         ),
         "portalRunIdList": portal_run_ids,
@@ -361,7 +361,7 @@ class Command:
 class GeneratePackageSubCommand(Command):
     """
     Usage:
-        data-sharing-tool generate-package help
+        data-sharing-tool generate-package --help
         data-sharing-tool generate-package (--package-name=<package_name>)
                                            (--lims-manifest-csv=<lims_manifest_csv_path>)
                                            [--workflow-manifest-csv=<workflow_manifest_csv_path>]
@@ -381,6 +381,8 @@ class GeneratePackageSubCommand(Command):
                                                              Only applicable if --workflow-manifest-csv is provided
       --defrost-archived-fastqs                              defrost archive fastqs if fastqs are in archive
       --wait                                                 Wait for the package to be created before exiting
+
+      --help                                                 Show this help message and exit
 
     Environment variables:
       AWS_PROFILE       The AWS profile used by boto3
@@ -439,7 +441,7 @@ class GeneratePackageSubCommand(Command):
 class ListPackagesSubCommand(Command):
     """
     Usage:
-        data-sharing-tool list-packages help
+        data-sharing-tool list-packages --help
         data-sharing-tool list-packages [--package-name=<package_name>]
 
     Description:
@@ -448,6 +450,9 @@ class ListPackagesSubCommand(Command):
 
     Options:
       --package-name=<package_name>  The package name to filter by
+
+      --help                         Show this help message and exit
+
 
     Environment variables:
       AWS_PROFILE       The AWS profile used by boto3
@@ -472,7 +477,7 @@ class ListPackagesSubCommand(Command):
 class GetPackageStatusSubCommand(Command):
     """
     Usage:
-        data-sharing-tool get-package-status help
+        data-sharing-tool get-package-status --help
         data-sharing-tool get-package-status (--package-id=<package_id>)
 
     Description:
@@ -480,6 +485,8 @@ class GetPackageStatusSubCommand(Command):
 
     Options:
       --package-id=<package_id>          The package id to get the status of
+
+      --help                             Show this help message and exit
 
     Environment variables:
       AWS_PROFILE       The AWS profile used by boto3
@@ -503,7 +510,7 @@ class GetPackageStatusSubCommand(Command):
 class ViewPackageReportSubCommand(Command):
     """
     Usage:
-        data-sharing-tool view-package-report help
+        data-sharing-tool view-package-report --help
         data-sharing-tool view-package-report (--package-id=<package_id>)
 
     Description:
@@ -512,6 +519,8 @@ class ViewPackageReportSubCommand(Command):
 
     Options:
       --package-id=<package_id>               View the package RMarkdown report
+
+      --help                                  Show this help message and exit
 
     Environment variables:
       AWS_PROFILE       The AWS profile used by boto3
@@ -541,7 +550,7 @@ class ViewPackageReportSubCommand(Command):
 class PushPackageSubCommand(Command):
     """
     Usage:
-        data-sharing-tool push-package help
+        data-sharing-tool push-package --help
         data-sharing-tool push-package (--package-id=<package_id>)
                                        (--share-location=<share_location>)
                                        [--wait]
@@ -554,6 +563,8 @@ class PushPackageSubCommand(Command):
       --package-id=<package_id>              The package id to push
       --share-location=<share_location>      The location to push the package to
       --wait                                 Don't terminate the command until the push job is complete
+
+      --help                                 Show this help message and exit
 
     Environment variables:
       AWS_PROFILE       The AWS profile used by boto3
@@ -595,7 +606,7 @@ class PushPackageSubCommand(Command):
 class PresignPackageSubCommand(Command):
     """
     Usage:
-        data-sharing-tool presign-package help
+        data-sharing-tool presign-package --help
         data-sharing-tool presign-package (--package-id=<package_id>)
 
     Description:
@@ -604,6 +615,8 @@ class PresignPackageSubCommand(Command):
 
     Options:
       --package-id=<package_id>             The package id to presign
+
+      --help                                Show this help message and exit
 
     Environment variables:
       AWS_PROFILE       The AWS profile used by boto3
@@ -636,7 +649,7 @@ class PresignPackageSubCommand(Command):
 class ListPushJobsSubCommand(Command):
     """
     Usage:
-        data-sharing-tool list-push-jobs help
+        data-sharing-tool list-push-jobs --help
         data-sharing-tool list-push-jobs [--package-id=<package_id>]
 
     Description:
@@ -645,7 +658,10 @@ class ListPushJobsSubCommand(Command):
       One can filter by a package id, this will match the --package-id parameter used in the push-package command.
 
     Options:
-      --package-id=<package_id>
+      --package-id=<package_id>        The package id
+
+      --help                           Show this help message and exit
+
 
     Environment variables:
       AWS_PROFILE       The AWS profile used by boto3
@@ -670,14 +686,16 @@ class ListPushJobsSubCommand(Command):
 class GetPushJobStatusSubCommand(Command):
     """
     Usage:
-        data-sharing-tool get-push-job-status help
-        data-sharing-tool get-push-job-status [--push-job-id <push_job_id>]
+        data-sharing-tool get-push-job-status --help
+        data-sharing-tool get-push-job-status [--push-job-id=<push_job_id>]
 
     Description:
       Get Push Job status
 
     Options:
-      --push-job-id=<push_job_id>
+      --push-job-id=<push_job_id>     The push job id to get the status of
+
+      --help                          Show this help message and exit
 
     Environment variables:
       AWS_PROFILE       The AWS profile used by boto3
