@@ -54,7 +54,8 @@ query_execution_id="$( \
       --work-group "${WORK_GROUP}" \
       --query-execution-context "Database=${DATABASE_NAME}, Catalog=${DATASOURCE_NAME}" \
       --output json \
-      --query 'QueryExecutionId' \
+      --query 'QueryExecutionId' | \
+  jq --raw-output
 )"
 
 # Wait for the query to complete
@@ -64,7 +65,8 @@ while true; do
       --no-cli-pager \
       --output json \
       --query-execution-id "${query_execution_id}" \
-      --query 'QueryExecution.Status.State' \
+      --query 'QueryExecution.Status.State' | \
+    jq --raw-output
   )"
 
   if [[ "${query_state}" == "SUCCEEDED" ]]; then
@@ -83,7 +85,8 @@ query_results_uri="$( \
     --no-cli-pager \
     --output json \
     --query-execution-id "${query_execution_id}" \
-    --query '.QueryExecution.ResultConfiguration.OutputLocation' \
+    --query 'QueryExecution.ResultConfiguration.OutputLocation' | \
+  jq --raw-output
 )"
   
 # Download the results
@@ -98,6 +101,7 @@ This may take around 5 mins to complete depending on the size of the package.
 
 ```bash
 data-sharing-tool generate-package \
+  --package-name 'my-package' \
   --lims-manifest-csv lims_manifest.csv \
   --wait
 ```

@@ -300,11 +300,14 @@ def generate_package(
         package_name: str,
         lims_manifest: DataFrame[LimsManifestDataFrame],
         workflow_manifest: Optional[DataFrame[WorkflowManifestDataFrame]] = None,
-        exclude_primary_data: bool = False
+        exclude_primary_data: bool = False,
+        defrost_archived_fastqs: bool = False
 ) -> str:
     """
     Given a package name, the manifest for the LIMS and an optional workflow manifest,
     generate and launch a package request.
+    :param defrost_archived_fastqs:
+    :param exclude_primary_data:
     :param package_name:
     :param lims_manifest:
     :param workflow_manifest:
@@ -328,6 +331,7 @@ def generate_package(
             (["SECONDARY_ANALYSIS"] if workflow_manifest is not None else [])
         ),
         "portalRunIdList": portal_run_ids,
+        "defrostArchivedFastqs": True if defrost_archived_fastqs else False
     }
 
     return create_package(
@@ -362,6 +366,7 @@ class GeneratePackageSubCommand(Command):
                                            (--lims-manifest-csv=<lims_manifest_csv_path>)
                                            [--workflow-manifest-csv=<workflow_manifest_csv_path>]
                                            [--exclude-primary-data]
+                                           [--defrost-archived-fastqs]
                                            [--wait]
 
     Description:
@@ -374,6 +379,7 @@ class GeneratePackageSubCommand(Command):
       --workflow-manifest-csv=<workflow_manifest_csv_path>   The workflow manifest CSV file
       --exclude-primary-data                                 Exclude FASTQ files from the package
                                                              Only applicable if --workflow-manifest-csv is provided
+      --defrost-archived-fastqs                              defrost archive fastqs if fastqs are in archive
       --wait                                                 Wait for the package to be created before exiting
 
     Environment variables:
@@ -391,6 +397,7 @@ class GeneratePackageSubCommand(Command):
         self.lims_manifest = self.cli_args['--lims-manifest-csv']
         self.workflow_manifest = self.cli_args['--workflow-manifest-csv']
         self.exclude_primary_data = self.cli_args['--exclude-primary-data']
+        self.defrost_archived_fastqs = self.cli_args['--defrost-archived-fastqs']
         self.wait = self.cli_args['--wait']
 
         # Check args
@@ -408,7 +415,8 @@ class GeneratePackageSubCommand(Command):
             package_name=self.package_name,
             lims_manifest=pd.read_csv(self.lims_manifest),
             workflow_manifest=pd.read_csv(self.workflow_manifest) if self.workflow_manifest else None,
-            exclude_primary_data=self.exclude_primary_data
+            exclude_primary_data=self.exclude_primary_data,
+            defrost_archived_fastqs=self.defrost_archived_fastqs
         )
 
         if self.wait:

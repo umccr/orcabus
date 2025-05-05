@@ -22,6 +22,7 @@ THIS_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 if ! command -v uv &> /dev/null; then
     echo "uv could not be found, installing..."
     curl -LsSf https://astral.sh/uv/install.sh | sh
+    . "$HOME/.local/bin/env"
 else
     echo "uv is already installed"
 fi
