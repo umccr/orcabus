@@ -438,6 +438,61 @@ pub(crate) mod tests {
     }
 
     #[sqlx::test(migrator = "MIGRATOR")]
+    async fn ingest_padded_null_sequencer(pool: PgPool) {
+        let ingester = test_ingester(pool.clone());
+        let events_one = test_events(Some(Created));
+
+        ingester.ingest(S3(events_one)).await.unwrap();
+
+        let mut events = test_events(Some(Created));
+        events.sequencers[0] = None;
+
+        // Insert a null sequencer without changing it's value to simulate an old event.
+        let mut tx = pool.begin().await.unwrap();
+        Ingester::ingest_query(&events, &mut tx).await.unwrap();
+        tx.commit().await.unwrap();
+
+        let mut events = test_events(Some(Created));
+        events.sequencers[0] = None;
+
+        ingester.ingest(S3(events)).await.unwrap();
+
+        let s3_object_results = fetch_results_ordered(&ingester).await;
+
+        assert_eq!(s3_object_results.len(), 3);
+        assert_with(
+            &s3_object_results[0],
+            Some(0),
+            Some(EXPECTED_SEQUENCER_CREATED_ONE.to_string()),
+            EXPECTED_VERSION_ID.to_string(),
+            Some(Default::default()),
+            Created,
+            false,
+        );
+        assert_with(
+            &s3_object_results[1],
+            Some(0),
+            Some(format!(
+                "{}000000000000-0100000000000000",
+                EXPECTED_SEQUENCER_CREATED_ONE
+            )),
+            EXPECTED_VERSION_ID.to_string(),
+            Some(Default::default()),
+            Created,
+            true,
+        );
+        assert_with(
+            &s3_object_results[2],
+            Some(0),
+            None,
+            EXPECTED_VERSION_ID.to_string(),
+            Some(Default::default()),
+            Created,
+            false,
+        );
+    }
+
+    #[sqlx::test(migrator = "MIGRATOR")]
     async fn ingest_padded_start_null_before(pool: PgPool) {
         let ingester = test_ingester(pool);
 

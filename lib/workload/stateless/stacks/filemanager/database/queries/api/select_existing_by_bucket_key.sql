@@ -51,7 +51,7 @@ cross join lateral (
         input.key = s3_object.key and
         input.version_id = s3_object.version_id and
         s3_object.is_current_state = true
-    order by s3_object.sequencer desc
+    order by s3_object.sequencer desc nulls last
     limit 1
 )
 as s3_object
