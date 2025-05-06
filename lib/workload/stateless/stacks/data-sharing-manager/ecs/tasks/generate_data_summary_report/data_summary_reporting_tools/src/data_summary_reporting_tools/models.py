@@ -1,7 +1,7 @@
 # Imports
 from datetime import datetime
 from enum import Enum
-from typing import Optional, TypedDict, List, Dict
+from typing import Optional, TypedDict, List, Dict, NotRequired
 import pandera as pa
 
 
@@ -60,7 +60,7 @@ class Sample(TypedDict):
     orcabusId: str
     sampleId: str
     externalSampleId: str
-    source: str
+    source: Optional[str]
 
 
 class Individual(TypedDict):
@@ -78,9 +78,12 @@ class Subject(TypedDict):
 class LibraryModel(pa.DataFrameModel):
     libraryId: str = pa.Field(str_startswith="L")
     orcabusId: str = pa.Field(str_startswith="lib.")
-    phenotype: str = pa.Field(isin=[
-        "tumor", "normal", "negative-control"
-    ])
+    phenotype: str = pa.Field(
+        isin=[
+            "tumor", "normal", "negative-control"
+        ],
+        nullable=True
+    )
     workflow: str = pa.Field()
     quality: Optional[str] = pa.Field(nullable=True)
     type: str = pa.Field()
@@ -187,7 +190,7 @@ class MetadataSummaryModel(pa.DataFrameModel):
     subject_id: str = pa.Field(alias='Subject ID')
     individual_id: str = pa.Field(alias='Individual ID')
     project_id: str = pa.Field(alias='Project ID')
-    phenotype: str = pa.Field(alias='Phenotype')
+    phenotype: str = pa.Field(alias='Phenotype', nullable=True)
     assay: str = pa.Field(alias='Assay')
     type_: str = pa.Field(alias='Type')
 

@@ -118,3 +118,22 @@ if __name__ == "__main__":
 #         "Rscript -e \"rmarkdown::render('data_summary_report.Rmd', output_file = 'data_summary_report.html')\"",
 #         shell=True
 #     )
+
+
+# Missing phenotypes and source data
+# if __name__ == "__main__":
+#     import subprocess
+#     from os import environ
+#
+#     environ['AWS_PROFILE'] = 'umccr-production'
+#     environ['AWS_REGION'] = 'ap-southeast-2'
+#     environ['PACKAGE_NAME'] = "ppgl"
+#     environ['DYNAMODB_TABLE_NAME'] = "data-sharing-packaging-lookup-table"
+#     environ['DYNAMODB_INDEX_NAME'] = 'content-index'
+#     environ['JOB_ID'] = 'pkg.01JTG3ZJPJ93DJ046Q2Y7X6845'
+#     generate_data_summary_report_template(environ['JOB_ID'])
+#
+#     subprocess.run(
+#         "Rscript -e \"rmarkdown::render('data_summary_report.Rmd', output_file = 'data_summary_report.html')\"",
+#         shell=True
+#     )
