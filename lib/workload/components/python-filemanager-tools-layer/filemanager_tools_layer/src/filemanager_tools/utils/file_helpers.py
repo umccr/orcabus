@@ -17,7 +17,7 @@ from .globals import (
     STORAGE_ENUM, STORAGE_PRIORITY,
 )
 from datetime import datetime, timedelta, timezone
-from urllib.parse import urlparse
+from urllib.parse import urlparse, unquote
 from itertools import batched
 
 if typing.TYPE_CHECKING:
@@ -178,7 +178,8 @@ def get_presigned_urls_from_ingest_ids(ingest_ids: List[str]) -> List[Dict[str, 
         list(map(
             lambda ingest_id_batch_: (
                 get_request_response_results(S3_LIST_ENDPOINT + "/presign", {
-                    "ingestId[]": list(ingest_id_batch_)
+                    "ingestId[]": list(ingest_id_batch_),
+                    "isAccessible": "true"
                 })
             ),
             ingest_id_batches
@@ -191,7 +192,7 @@ def get_presigned_urls_from_ingest_ids(ingest_ids: List[str]) -> List[Dict[str, 
     return list(map(
         lambda presigned_url_iter_: {
             "ingestId": next(filter(
-                lambda s3_object_iter_: s3_object_iter_['fileObject']['key'] == urlparse(presigned_url_iter_).path.lstrip("/"),
+                lambda s3_object_iter_: s3_object_iter_['fileObject']['key'] == unquote(urlparse(presigned_url_iter_).path.lstrip("/")),
                 s3_object_list
             ))['ingestId'],
             "presignedUrl": presigned_url_iter_
