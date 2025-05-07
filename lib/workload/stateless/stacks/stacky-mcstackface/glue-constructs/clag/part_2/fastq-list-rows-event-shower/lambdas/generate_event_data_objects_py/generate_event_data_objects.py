@@ -22,7 +22,6 @@ DYNAMODB_TABLE_NAME_ENV_VAR = "INSTRUMENT_RUN_TABLE_NAME"
 
 # Table partitions
 FASTQ_LIST_ROW_EVENT_OBJ_PARTITION_ENV_VAR = "FASTQ_LIST_ROW_EVENT_OBJ_TABLE_PARTITION_NAME"
-PROJECT_EVENT_OBJ_PARTITION_ENV_VAR = "PROJECT_EVENT_OBJ_TABLE_PARTITION_NAME"
 
 
 def get_dynamodb_db_client() -> 'DynamoDBClient':
@@ -110,81 +109,6 @@ def get_fastq_list_row_dynamodb_put_objects(
     )
 
 
-def get_libraries_in_project(
-        project_obj: Dict[str, str],
-        fastq_list_row_event_data_list: List[Dict[str, str]],
-        library_obj_list: List[Dict[str, str]]
-):
-    return list(
-        map(
-            lambda library_obj_iter: {
-                "library": {
-                    "orcabusId": library_obj_iter.get("orcabusId"),
-                    "libraryId": library_obj_iter.get("libraryId"),
-                },
-                "fastqPairs": list(
-                    map(
-                        lambda fastq_list_row_event_data_iter: (
-                            fastq_list_row_event_data_iter.get("fastqListRow")
-                        ),
-                        filter(
-                            lambda fastq_list_row_event_data_iter: (
-                                    fastq_list_row_event_data_iter.get("library").get("libraryId") ==
-                                    library_obj_iter.get("libraryId")
-                            ),
-                            fastq_list_row_event_data_list
-                        )
-                    )
-                )
-            },
-            filter(
-                lambda library_obj_iter_: (
-                    any(
-                        map(
-                            lambda project_obj_iter_: (
-                                    library_obj_iter_.get("orcabusId") ==
-                                    project_obj_iter_
-                            ),
-                            project_obj.get("librarySet")
-                        )
-                    )
-                ),
-                library_obj_list
-            )
-        )
-    )
-
-
-def get_project_dynamodb_put_objects(
-        instrument_run_id: str,
-        project_obj_list: List[Dict[str, str]],
-        fastq_list_row_event_data_list: List[Dict[str, str]],
-        library_obj_list: List[Dict[str, str]]
-):
-    return list(
-        map(
-            lambda project_obj_iter_: {
-                "id": f"{project_obj_iter_.get('orcabusId')}__{instrument_run_id}",
-                "id_type": environ.get(PROJECT_EVENT_OBJ_PARTITION_ENV_VAR),
-                "event_data": {
-                    "instrumentRunId": instrument_run_id,
-                    "project": dict(
-                        filter(
-                            lambda kv: not kv[0] == 'librarySet',
-                            project_obj_iter_.items()
-                        )
-                    ),
-                    "libraryFastqSet": get_libraries_in_project(
-                        project_obj=project_obj_iter_,
-                        fastq_list_row_event_data_list=fastq_list_row_event_data_list,
-                        library_obj_list=library_obj_list
-                    )
-                }
-            },
-            project_obj_list
-        )
-    )
-
 
 def handler(event, context):
     """
@@ -197,7 +121,6 @@ def handler(event, context):
     # Get the fastq list rows and instrument run id
     fastq_list_rows = event['fastq_list_rows']
     library_obj_list = event['library_objs']
-    project_obj_list = event['project_objs']
     instrument_run_id = event['instrument_run_id']
 
     # Generate the start and complete shower event data
@@ -219,32 +142,11 @@ def handler(event, context):
         library_obj_list=library_obj_list
     )
 
-    # Write fastq list row event details to database
-    project_dynamodb_obj_list = get_project_dynamodb_put_objects(
-        instrument_run_id=instrument_run_id,
-        project_obj_list=project_obj_list,
-        fastq_list_row_event_data_list=list(
-            map(
-                lambda fastq_list_row_dynamodb_iter_: fastq_list_row_dynamodb_iter_.get("event_data"),
-                fastq_list_row_dynamodb_obj_list
-            )
-        ),
-        library_obj_list=library_obj_list
-    )
-
     # Write fastq list row event objs to database
     _ = list(
         map(
             lambda fastq_list_row_dynamodb_iter_: put_item(**fastq_list_row_dynamodb_iter_),
             fastq_list_row_dynamodb_obj_list
-        )
-    )
-
-    # Write project event objs to database
-    _ = list(
-        map(
-            lambda project_dynamodb_iter_: put_item(**project_dynamodb_iter_),
-            project_dynamodb_obj_list
         )
     )
 
