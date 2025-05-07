@@ -374,7 +374,13 @@ export class FastqUnarchivingManagerStack extends Stack {
         statements: [
           new iam.PolicyStatement({
             resources: [runUnarchivingStateMachine.stateMachineArn],
-            actions: ['states:StartExecution', 'states:DescribeExecution', 'states:StopExecution'],
+            actions: ['states:StartExecution'],
+          }),
+          new iam.PolicyStatement({
+            resources: [
+              `arn:aws:states:${cdk.Aws.REGION}:${cdk.Aws.ACCOUNT_ID}:execution:${runUnarchivingStateMachine.stateMachineName}/*:*`,
+            ],
+            actions: ['states:RedriveExecution'],
           }),
         ],
       }),
@@ -400,7 +406,7 @@ export class FastqUnarchivingManagerStack extends Stack {
     );
 
     NagSuppressions.addResourceSuppressions(
-      runUnarchivingStateMachine,
+      [runUnarchivingStateMachine, distributedMapPolicy],
       [
         {
           id: 'AwsSolutions-IAM5',
