@@ -72,7 +72,7 @@ def get_global_cycle_count(samplesheet: Dict) -> int:
     if samplesheet['bclconvertSettings'].get("overrideCycles") is not None:
         override_cycles = samplesheet['bclconvertSettings']['overrideCycles']
         return get_cycle_count_from_override_cycles(override_cycles)
-    return samplesheet['reads']['read1Cycles'] + samplesheet['reads'].get('read2Cycles', None)
+    return samplesheet['reads']['read1Cycles'] + samplesheet['reads'].get('read2Cycles', 0)
 
 
 def handler(event, context) -> Dict[str, List[Dict[str, str]]]:
