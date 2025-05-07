@@ -27,18 +27,20 @@ import { FastqToolsPythonLambdaLayer } from '../../../../components/python-fastq
 import { PythonUvFunction } from '../../../../components/uv-python-lambda-image-builder';
 import * as events from 'aws-cdk-lib/aws-events';
 import {
-  BsshFastqCopyToFastqSetCreationEventRuleProps,
+  BsshFastqCopyToAddReadSetCreationEventRuleProps,
   FastqGlueStackConfig,
   FastqSetGenerationTemplateFunctionProps,
   LambdaBuilderInputProps,
   LambdaNameList,
   lambdasBuilderInputProps,
   lambdaToRequirementsMapping,
+  SequenceRunManagerToFastqSetCreationEventRuleProps,
 } from './interfaces';
 import * as eventsTargets from 'aws-cdk-lib/aws-events-targets';
 import { EventField, RuleTargetInput } from 'aws-cdk-lib/aws-events';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import { NagSuppressions } from 'cdk-nag';
+import { SequenceToolsPythonLambdaLayer } from '../../../../components/python-sequence-tools-layer';
 
 // Some globals
 export type FastqGlueStackProps = FastqGlueStackConfig & cdk.StackProps;
@@ -65,6 +67,10 @@ export class FastqGlueStack extends Stack {
 
     // Create the fastq tool layer
     const fastqLayer = new FastqToolsPythonLambdaLayer(this, 'fastq-tools-layer', {
+      layerPrefix: this.lambdaLayerPrefix,
+    }).lambdaLayerVersionObj;
+
+    const sequenceLayer = new SequenceToolsPythonLambdaLayer(this, 'sequence-tools-layer', {
       layerPrefix: this.lambdaLayerPrefix,
     }).lambdaLayerVersionObj;
 
@@ -104,6 +110,7 @@ export class FastqGlueStack extends Stack {
         orcabusTokenSecretObject: orcabusTokenSecretObj,
       },
       fastqToolsLayer: fastqLayer,
+      sequenceToolsLayer: sequenceLayer,
       cacheBucketProps: {
         bucket: pipelineCacheBucket,
         prefix: props.pipelineCachePrefix,
@@ -120,14 +127,26 @@ export class FastqGlueStack extends Stack {
       eventDetailType: props.eventDetailType,
     });
 
-    // Create rule to trigger the state machine
-    this.createEventBridgeRuleToTriggerFastqSetStateMachine({
+    // Create the add read set state machine
+    const fastqAddReadSetStateMachine = this.createAddReadSetStateMachine();
+
+    // Create the event rule to trigger the fastq set generation state machine
+    this.createEventBridgeRuleToTriggerCreateFastqSetStateMachine({
+      eventBus: eventBus,
+      eventDetailType: props.sequenceRunStateChangeEventDetailType,
+      eventSource: props.sequenceRunManageEventSource,
+      eventStatus: 'SUCCEEDED',
+      stateMachineTarget: fastqSetGenerationStateMachine,
+    });
+
+    // Create rule to trigger the add read set state machine
+    this.createEventBridgeRuleToTriggerAddReadSetStateMachine({
       eventBus: eventBus,
       eventDetailType: props.workflowRunStateChangeEventDetailType,
       eventSource: props.workflowManagerEventSource,
       eventStatus: 'SUCCEEDED',
       eventWorkflowName: props.bsshFastqCopyManagerWorkflowName,
-      stateMachineTarget: fastqSetGenerationStateMachine,
+      stateMachineTarget: fastqAddReadSetStateMachine,
     });
   }
 
@@ -175,16 +194,23 @@ export class FastqGlueStack extends Stack {
     // between the state machine and the role
     // Instead we use the workaround here - https://github.com/aws/aws-cdk/issues/28820#issuecomment-1936010520
     // fastqSetGenerationStateMachine.grantStartExecution(fastqSetGenerationStateMachine.role);
-    const distributedMapPolicy = new iam.Policy(this, 'sfn-distributed-map-policy', {
+    const distributedMapPolicy = new iam.Policy(this, 'fastq-set-sfn-distributed-map-policy', {
       document: new iam.PolicyDocument({
         statements: [
           new iam.PolicyStatement({
             resources: [fastqSetGenerationStateMachine.stateMachineArn],
             actions: ['states:StartExecution'],
           }),
+          new iam.PolicyStatement({
+            resources: [
+              `arn:aws:states:${cdk.Aws.REGION}:${cdk.Aws.ACCOUNT_ID}:execution:${fastqSetGenerationStateMachine.stateMachineName}/*:*`,
+            ],
+            actions: ['states:RedriveExecution'],
+          }),
         ],
       }),
     });
+
     // Add the policy to the state machine role
     fastqSetGenerationStateMachine.role.attachInlinePolicy(distributedMapPolicy);
 
@@ -199,12 +225,107 @@ export class FastqGlueStack extends Stack {
       })
     );
 
+    // Redrive execution requires permissions to list state machine executions
+    NagSuppressions.addResourceSuppressions(
+      [fastqSetGenerationStateMachine, distributedMapPolicy],
+      [
+        {
+          id: 'AwsSolutions-IAM5',
+          reason:
+            'grantRead uses asterisk at the end of executions, as we need permissions for all execution invocations',
+        },
+      ],
+      true
+    );
+
     return fastqSetGenerationStateMachine;
+  }
+
+  private createAddReadSetStateMachine(): IStateMachine {
+    // Create the aws step function
+    const fastqAddReadSetStateMachine = new sfn.StateMachine(this, 'AddReadSetGeneration', {
+      // State Machine Name
+      stateMachineName: 'fastq-glue-add-read-set-sfn',
+      // Definition
+      definitionBody: DefinitionBody.fromFile(
+        path.join(
+          __dirname,
+          '../step_functions_templates/fastq_set_add_read_set_template_sfn.asl.json'
+        )
+      ),
+      // Definition Substitutions
+      definitionSubstitutions: {
+        // All lambda substitutions
+        ...this.createLambdaDefinitionSubstitutions(),
+      },
+    });
+
+    // For all lambdas in the props.lambdaObjects, grant invoke permissions to the state machine
+    let lambdaName: LambdaNameList;
+    for (lambdaName in this.lambdaObjects) {
+      this.lambdaObjects[lambdaName].currentVersion.grantInvoke(fastqAddReadSetStateMachine);
+    }
+
+    // Because this steps execution uses a distributed map running an express step function, we
+    // have to wire up some extra permissions
+    // Grant the state machine's role to execute itself
+    // However we cannot just grant permission to the role as this will result in a circular dependency
+    // between the state machine and the role
+    // Instead we use the workaround here - https://github.com/aws/aws-cdk/issues/28820#issuecomment-1936010520
+    // fastqAddReadSetStateMachine.grantStartExecution(fastqAddReadSetStateMachine.role);
+    const distributedMapPolicy = new iam.Policy(
+      this,
+      'fastq-add-read-set-sfn-distributed-map-policy',
+      {
+        document: new iam.PolicyDocument({
+          statements: [
+            new iam.PolicyStatement({
+              resources: [fastqAddReadSetStateMachine.stateMachineArn],
+              actions: ['states:StartExecution'],
+            }),
+            new iam.PolicyStatement({
+              resources: [
+                `arn:aws:states:${cdk.Aws.REGION}:${cdk.Aws.ACCOUNT_ID}:execution:${fastqAddReadSetStateMachine.stateMachineName}/*:*`,
+              ],
+              actions: ['states:RedriveExecution'],
+            }),
+          ],
+        }),
+      }
+    );
+
+    // Add the policy to the state machine role
+    fastqAddReadSetStateMachine.role.attachInlinePolicy(distributedMapPolicy);
+
+    // Treat the state machine as if it's running a nested statemachine
+    // See https://stackoverflow.com/questions/60612853/nested-step-function-in-a-step-function-unknown-error-not-authorized-to-cr
+    fastqAddReadSetStateMachine.addToRolePolicy(
+      new iam.PolicyStatement({
+        resources: [
+          `arn:aws:events:${cdk.Aws.REGION}:${cdk.Aws.ACCOUNT_ID}:rule/StepFunctionsGetEventsForStepFunctionsExecutionRule`,
+        ],
+        actions: ['events:PutTargets', 'events:PutRule', 'events:DescribeRule'],
+      })
+    );
+
+    return fastqAddReadSetStateMachine;
   }
 
   private createLambdaFunction(props: LambdaBuilderInputProps): PythonFunction {
     const lambdaNameToSnakeCase = this.camelCaseToSnakeCase(props.lambdaName);
 
+    // Initialise layer list
+    const layers = [];
+
+    // Add the fastq tools layer if it is required
+    if (props.fastqToolsLayer) {
+      layers.push(props.fastqToolsLayer);
+    }
+    if (props.sequenceToolsLayer) {
+      layers.push(props.sequenceToolsLayer);
+    }
+
+    // Create the lambda function
     const lambdaFunction = new PythonUvFunction(this, props.lambdaName, {
       entry: path.join(__dirname, '../lambdas', lambdaNameToSnakeCase + '_py'),
       runtime: lambda.Runtime.PYTHON_3_12,
@@ -213,7 +334,7 @@ export class FastqGlueStack extends Stack {
       handler: 'handler',
       timeout: Duration.seconds(60),
       memorySize: 2048,
-      layers: props.fastqToolsLayer ? [props.fastqToolsLayer] : [],
+      layers: layers,
     });
 
     // Add envs / permissions to the lambda function
@@ -268,6 +389,9 @@ export class FastqGlueStack extends Stack {
           fastqToolsLayer: lambdaToRequirementsMapping[lambdaName].needsFastqToolsLayer
             ? props.fastqToolsLayer
             : undefined,
+          sequenceToolsLayer: lambdaToRequirementsMapping[lambdaName].needsSequenceToolsLayer
+            ? props.sequenceToolsLayer
+            : undefined,
           cacheBucketProps: lambdaToRequirementsMapping[lambdaName].needsCacheBucketReadPermissions
             ? props.cacheBucketProps
             : undefined,
@@ -306,11 +430,44 @@ export class FastqGlueStack extends Stack {
     return definitionSubstitutions;
   }
 
-  private createEventBridgeRuleToTriggerFastqSetStateMachine(
-    props: BsshFastqCopyToFastqSetCreationEventRuleProps
+  private createEventBridgeRuleToTriggerCreateFastqSetStateMachine(
+    props: SequenceRunManagerToFastqSetCreationEventRuleProps
   ): events.Rule {
     /*
-    Listen to the bssh fastq copy events and then trigger the fastq set state machine
+    Listen to the sequence run manager events and then trigger the fastq set state machine
+    */
+    const eventRule = new events.Rule(this, 'sequenceRunManagerEventSucceeded', {
+      ruleName: `fastq-glue-sequence-run-manager-event-succeeded`,
+      eventBus: props.eventBus,
+      eventPattern: {
+        source: [props.eventSource],
+        detailType: [props.eventDetailType],
+        detail: {
+          status: [{ 'equals-ignore-case': props.eventStatus }],
+        },
+      },
+    });
+
+    // Add target to event rule
+    // Note that we expect fastqListRowIdList as our only input
+    // While the fastqUnarchivingComplete event detail body contains the fastq list row objects we need to
+    // rename the list to match the input requirements of the step function
+    eventRule.addTarget(
+      new eventsTargets.SfnStateMachine(props.stateMachineTarget, {
+        input: RuleTargetInput.fromObject({
+          instrumentRunId: EventField.fromPath('$.detail.instrumentRunId'),
+        }),
+      })
+    );
+
+    return eventRule;
+  }
+
+  private createEventBridgeRuleToTriggerAddReadSetStateMachine(
+    props: BsshFastqCopyToAddReadSetCreationEventRuleProps
+  ): events.Rule {
+    /*
+    Listen to the bssh fastq copy events and then trigger the fastq add read-set state machine
     */
     const eventRule = new events.Rule(this, 'bsshFastqCopySucceeded', {
       ruleName: `fastq-glue-bssh-fastq-copy-succeeded`,

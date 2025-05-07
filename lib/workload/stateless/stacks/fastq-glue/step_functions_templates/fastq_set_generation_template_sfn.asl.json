@@ -4,28 +4,18 @@
   "States": {
     "Set inputs variables": {
       "Type": "Pass",
-      "Next": "Secondary variables",
+      "Next": "Get Libraries in SampleSheet",
       "Assign": {
-        "outputUri": "{% $states.input.outputUri %}",
         "instrumentRunId": "{% $states.input.instrumentRunId %}"
       }
     },
-    "Secondary variables": {
-      "Type": "Pass",
-      "Next": "Get Samples in SampleSheet",
-      "Assign": {
-        "sampleSheetUri": "{% $outputUri & 'Reports/SampleSheet.csv' %}",
-        "fastqListUri": "{% $outputUri & 'Reports/fastq_list.csv' %}",
-        "demuxStatsUri": "{% $outputUri & 'Reports/Demultiplex_Stats.csv' %}"
-      }
-    },
-    "Get Samples in SampleSheet": {
+    "Get Libraries in SampleSheet": {
       "Type": "Task",
       "Resource": "arn:aws:states:::lambda:invoke",
       "Arguments": {
-        "FunctionName": "${__get_samples_from_samplesheet_lambda_function_arn__}",
+        "FunctionName": "${__get_library_id_list_from_samplesheet_lambda_function_arn__}",
         "Payload": {
-          "sampleSheetUri": "{% $sampleSheetUri %}"
+          "instrumentRunId": "{% $instrumentRunId %}"
         }
       },
       "Retry": [
@@ -42,23 +32,16 @@
           "JitterStrategy": "FULL"
         }
       ],
-      "Next": "For each sample",
+      "Next": "For each library (batched)",
       "Output": {
-        "samplesList": "{% $states.result.Payload.samplesList %}"
+        "libraryIdList": "{% $states.result.Payload.libraryIdList %}"
       }
     },
-    "For each sample": {
+    "For each library (batched)": {
       "Type": "Map",
-      "Label": "Foreachsample",
+      "Label": "Foreachlibrarybatched",
       "MaxConcurrency": 1000,
-      "Items": "{% $states.input.samplesList %}",
-      "ItemSelector": {
-        "sampleIdMapIter": "{% $states.context.Map.Item.Value %}",
-        "sampleSheetUriMapIter": "{% $sampleSheetUri %}",
-        "demuxStatsUriMapIter": "{% $demuxStatsUri %}",
-        "fastqListUriMapIter": "{% $fastqListUri %}",
-        "instrumentRunIdMapIter": "{% $instrumentRunId %}"
-      },
+      "Items": "{% $states.input.libraryIdList %}",
       "ItemProcessor": {
         "ProcessorConfig": {
           "Mode": "DISTRIBUTED",
@@ -68,139 +51,22 @@
         "States": {
           "Get vars inside map": {
             "Type": "Pass",
-            "Next": "Get Per Sample Stats",
+            "Next": "Get BCLConvert Data from SampleSheet",
             "Assign": {
-              "sampleIdMapIter": "{% $states.input.sampleIdMapIter %}",
-              "sampleSheetUriMapIter": "{% $states.input.sampleSheetUriMapIter %}",
-              "demuxStatsUriMapIter": "{% $states.input.demuxStatsUriMapIter %}",
-              "fastqListUriMapIter": "{% $states.input.fastqListUriMapIter %}",
-              "instrumentRunIdMapIter": "{% $states.input.instrumentRunIdMapIter %}"
+              "libraryIdListMapIter": "{% $states.input.Items %}",
+              "instrumentRunIdMapIter": "{% $states.input.BatchInput.instrumentRunId %}"
             }
           },
-          "Get Per Sample Stats": {
-            "Type": "Parallel",
-            "Branches": [
-              {
-                "StartAt": "Get Read Count from Demux Stats",
-                "States": {
-                  "Get Read Count from Demux Stats": {
-                    "Type": "Task",
-                    "Resource": "arn:aws:states:::lambda:invoke",
-                    "Arguments": {
-                      "FunctionName": "${__get_sample_demultiplex_stats_lambda_function_arn__}",
-                      "Payload": {
-                        "sampleId": "{% $sampleIdMapIter %}",
-                        "demuxStatsUri": "{% $demuxStatsUriMapIter %}"
-                      }
-                    },
-                    "Retry": [
-                      {
-                        "ErrorEquals": [
-                          "Lambda.ServiceException",
-                          "Lambda.AWSLambdaException",
-                          "Lambda.SdkClientException",
-                          "Lambda.TooManyRequestsException"
-                        ],
-                        "IntervalSeconds": 1,
-                        "MaxAttempts": 3,
-                        "BackoffRate": 2,
-                        "JitterStrategy": "FULL"
-                      }
-                    ],
-                    "End": true,
-                    "Output": {
-                      "sampleDemuxStats": "{% $states.result.Payload.sampleDemuxStats %}"
-                    }
-                  }
-                }
-              },
-              {
-                "StartAt": "Get File Names from Fastq List Csv",
-                "States": {
-                  "Get File Names from Fastq List Csv": {
-                    "Type": "Task",
-                    "Resource": "arn:aws:states:::lambda:invoke",
-                    "Output": {
-                      "sampleFileNames": "{% $states.result.Payload.sampleFileNames %}"
-                    },
-                    "Arguments": {
-                      "FunctionName": "${__get_file_names_from_fastq_list_csv_lambda_function_arn__}",
-                      "Payload": {
-                        "sampleId": "{% $sampleIdMapIter %}",
-                        "fastqListUri": "{% $fastqListUriMapIter %}"
-                      }
-                    },
-                    "Retry": [
-                      {
-                        "ErrorEquals": [
-                          "Lambda.ServiceException",
-                          "Lambda.AWSLambdaException",
-                          "Lambda.SdkClientException",
-                          "Lambda.TooManyRequestsException"
-                        ],
-                        "IntervalSeconds": 1,
-                        "MaxAttempts": 3,
-                        "BackoffRate": 2,
-                        "JitterStrategy": "FULL"
-                      }
-                    ],
-                    "End": true
-                  }
-                }
-              },
-              {
-                "StartAt": "Get BCLConvert Data from SampleSheet",
-                "States": {
-                  "Get BCLConvert Data from SampleSheet": {
-                    "Type": "Task",
-                    "Resource": "arn:aws:states:::lambda:invoke",
-                    "Output": {
-                      "sampleBclConvertData": "{% $states.result.Payload.sampleBclConvertData %}"
-                    },
-                    "Arguments": {
-                      "FunctionName": "${__get_bclconvert_data_from_samplesheet_lambda_function_arn__}",
-                      "Payload": {
-                        "sampleId": "{% $sampleIdMapIter %}",
-                        "sampleSheetUri": "{% $sampleSheetUriMapIter %}"
-                      }
-                    },
-                    "Retry": [
-                      {
-                        "ErrorEquals": [
-                          "Lambda.ServiceException",
-                          "Lambda.AWSLambdaException",
-                          "Lambda.SdkClientException",
-                          "Lambda.TooManyRequestsException"
-                        ],
-                        "IntervalSeconds": 1,
-                        "MaxAttempts": 3,
-                        "BackoffRate": 2,
-                        "JitterStrategy": "FULL"
-                      }
-                    ],
-                    "End": true
-                  }
-                }
-              }
-            ],
-            "Next": "Generate Fastq Set Object",
-            "Output": {
-              "sampleDemuxStats": "{% $states.result[0].sampleDemuxStats %}",
-              "sampleFileNames": "{% $states.result[1].sampleFileNames %}",
-              "sampleBclConvertData": "{% $states.result[2].sampleBclConvertData %}"
-            }
-          },
-          "Generate Fastq Set Object": {
+          "Get BCLConvert Data from SampleSheet": {
             "Type": "Task",
             "Resource": "arn:aws:states:::lambda:invoke",
-            "Output": null,
+            "Output": {
+              "bclConvertDataByLibrary": "{% $states.result.Payload.bclConvertDataByLibrary %}"
+            },
             "Arguments": {
-              "FunctionName": "${__create_fastq_set_object_lambda_function_arn__}",
+              "FunctionName": "${__get_bclconvert_data_from_samplesheet_lambda_function_arn__}",
               "Payload": {
-                "sampleId": "{% $sampleIdMapIter %}",
-                "sampleDemuxStats": "{% $states.input.sampleDemuxStats %}",
-                "sampleFileNames": "{% $states.input.sampleFileNames %}",
-                "sampleBclConvertData": "{% $states.input.sampleBclConvertData %}",
+                "libraryIdList": "{% $libraryIdListMapIter %}",
                 "instrumentRunId": "{% $instrumentRunIdMapIter %}"
               }
             },
@@ -218,12 +84,63 @@
                 "JitterStrategy": "FULL"
               }
             ],
+            "Next": "For each library"
+          },
+          "For each library": {
+            "Type": "Map",
+            "Items": "{% $states.input.bclConvertDataByLibrary %}",
+            "ItemSelector": {
+              "libraryId": "{% $states.context.Map.Item.Value.libraryId %}",
+              "bclConvertData": "{% $states.context.Map.Item.Value.bclConvertData %}"
+            },
+            "ItemProcessor": {
+              "ProcessorConfig": {
+                "Mode": "INLINE"
+              },
+              "StartAt": "Generate Fastq Set Object (with no readset)",
+              "States": {
+                "Generate Fastq Set Object (with no readset)": {
+                  "Type": "Task",
+                  "Resource": "arn:aws:states:::lambda:invoke",
+                  "Output": null,
+                  "Arguments": {
+                    "FunctionName": "${__create_fastq_set_object_lambda_function_arn__}",
+                    "Payload": {
+                      "libraryId": "{% $states.input.libraryId %}",
+                      "bclConvertData": "{% $states.input.bclConvertData %}",
+                      "instrumentRunId": "{% $instrumentRunIdMapIter %}"
+                    }
+                  },
+                  "Retry": [
+                    {
+                      "ErrorEquals": [
+                        "Lambda.ServiceException",
+                        "Lambda.AWSLambdaException",
+                        "Lambda.SdkClientException",
+                        "Lambda.TooManyRequestsException"
+                      ],
+                      "IntervalSeconds": 1,
+                      "MaxAttempts": 3,
+                      "BackoffRate": 2,
+                      "JitterStrategy": "FULL"
+                    }
+                  ],
+                  "End": true
+                }
+              }
+            },
             "End": true
           }
         }
       },
       "Output": null,
-      "Next": "Generate Fastq Set Object Generation Complete Event"
+      "Next": "Generate Fastq Set Object Generation Complete Event",
+      "ItemBatcher": {
+        "MaxItemsPerBatch": 10,
+        "BatchInput": {
+          "instrumentRunId": "{% $instrumentRunId %}"
+        }
+      }
     },
     "Generate Fastq Set Object Generation Complete Event": {
       "Type": "Task",

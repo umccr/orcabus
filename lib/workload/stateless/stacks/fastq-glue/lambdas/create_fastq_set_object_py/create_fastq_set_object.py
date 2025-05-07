@@ -59,11 +59,11 @@ The fastq set object has the following structure:
 """
 import typing
 from typing import Optional, List
-from os import environ
 from pathlib import Path
 from tempfile import TemporaryDirectory
 import boto3
 import re
+from os import environ
 import json
 
 # Imports
@@ -133,14 +133,57 @@ def merge_dataframes(
 def generate_fastq_list_row_list_from_inputs(
         instrument_run_id: str,
         bclconvert_data_df: pd.DataFrame,
-        filenames_df: pd.DataFrame,
-        demux_stats_df: pd.DataFrame,
 ) -> List[FastqListRow]:
-    merged_df = merge_dataframes(bclconvert_data_df, filenames_df, demux_stats_df)
-
+    """
+    Generate fastq list row list from the inputs
+    :param instrument_run_id:
+    :param bclconvert_data_df:
+    :return:
+    """
     return list(map(
         lambda index_row_iter_: create_fastq_list_row_object(
-            {
+            index=index_row_iter_[1]["index"],
+            lane=index_row_iter_[1]["lane"],
+            instrumentRunId=instrument_run_id,
+            library={
+                "libraryId": index_row_iter_[1]["libraryId"]
+            },
+            platform=DEFAULT_PLATFORM,
+            center=DEFAULT_CENTER,
+            # Convert 250320_A01052_0256_BHFCFCDSXF
+            # To 2025-03-20
+            date=(
+                datetime.strptime(
+                    instrument_run_id.split("_")[0],
+                    "%y%m%d"
+                ).strftime(
+                    "%Y-%m-%d"
+                )
+            ),
+            isValid=True,
+        ),
+        bclconvert_data_df.iterrows()
+    ))
+
+
+def create_fastq_set_from_df(
+        bclconvert_data_df: pd.DataFrame,
+        instrument_run_id: str,
+) -> FastqSet:
+    """
+    From the merged dataframe, create the fastq set object
+    :param instrument_run_id:
+    :param bclconvert_data_df:
+    :return:
+    """
+    return create_fastq_set_object(
+        library={
+            "libraryId": bclconvert_data_df["libraryId"].unique().item(),
+        },
+        allowAdditionalFastq=False,
+        isCurrentFastqSet=True,
+        fastqSet=list(map(
+            lambda index_row_iter_: FastqListRow(**dict({
                 "index": index_row_iter_[1]["index"],
                 "lane": index_row_iter_[1]["lane"],
                 "instrumentRunId": instrument_run_id,
@@ -159,104 +202,11 @@ def generate_fastq_list_row_list_from_inputs(
                         "%Y-%m-%d"
                     )
                 ),
-                # Generate readset
-                # But consider that the read2FileUri may not exist
-                "readSet": dict(filter(
-                    lambda kv: kv[1] is not None,
-                    {
-                        "r1": {
-                            "s3Uri": index_row_iter_[1]["read1FileUri"],
-                        },
-                        "r2": {
-                            "s3Uri": index_row_iter_[1].get("read2FileUri", None),
-                        },
-                        "compressionFormat": "GZIP" if index_row_iter_[1]["read1FileUri"].endswith(
-                            ".gz") else "ORA",
-                    }.items()
-                )),
-                "readCount": index_row_iter_[1]["readCount"],
-                "baseCountEst": (index_row_iter_[1]["readCount"] * index_row_iter_[1]["cycleCount"]),
                 "isValid": True,
-            }
-        ),
-        merged_df.iterrows()
-    ))
-
-
-def create_fastq_set_from_df(
-        merged_df: pd.DataFrame,
-        instrument_run_id: str,
-) -> FastqSet:
-    """
-    From the merged dataframe, create the fastq set object
-    :param merged_df:
-    :return:
-    """
-    return create_fastq_set_object(
-        {
-            "library": {
-                "libraryId": merged_df["libraryId"].unique().item(),
-            },
-            "allowAdditionalFastq": False,
-            "isCurrentFastqSet": True,
-            "fastqSet": list(map(
-                lambda index_row_iter_: {
-                    "index": index_row_iter_[1]["index"],
-                    "lane": index_row_iter_[1]["lane"],
-                    "instrumentRunId": instrument_run_id,
-                    "library": {
-                        "libraryId": index_row_iter_[1]["libraryId"]
-                    },
-                    "platform": DEFAULT_PLATFORM,
-                    "center": DEFAULT_CENTER,
-                    # Convert 250320_A01052_0256_BHFCFCDSXF
-                    # To 2025-03-20
-                    "date": (
-                        datetime.strptime(
-                            instrument_run_id.split("_")[0],
-                            "%y%m%d"
-                        ).strftime(
-                            "%Y-%m-%d"
-                        )
-                    ),
-                    # Generate readset
-                    # But consider that the read2FileUri may not exist
-                    "readSet": dict(filter(
-                        lambda kv: kv[1] is not None,
-                        {
-                            "r1": {
-                                "s3Uri": index_row_iter_[1]["read1FileUri"],
-                            },
-                            "r2": {
-                                "s3Uri": index_row_iter_[1].get("read2FileUri", None),
-                            },
-                            "compressionFormat": "GZIP" if index_row_iter_[1]["read1FileUri"].endswith(
-                                ".gz") else "ORA",
-                        }.items()
-                    )),
-                    "readCount": index_row_iter_[1]["readCount"],
-                    "baseCountEst": (index_row_iter_[1]["readCount"] * index_row_iter_[1]["cycleCount"]),
-                    "isValid": True,
-                },
-                merged_df.iterrows()
-            ))
-        }
+            })),
+            bclconvert_data_df.iterrows()
+        ))
     )
-
-
-def fastq_list_row_exists(
-        library_id: str,
-        lane: int,
-        instrument_run_id: str,
-) -> bool:
-    """
-    Return true if the fastq list row exists
-    otherwise false
-    :param library_id:
-    :param lane:
-    :param instrument_run_id:
-    :return:
-    """
 
 
 def get_ssm_client() -> 'SSMClient':
@@ -405,9 +355,7 @@ def is_rerun(
 def append_to_existing_fastq_set(
     library_id: str,
     instrument_run_id: str,
-    bclconvert_data_df: pd.DataFrame,
-    filenames_df: pd.DataFrame,
-    demux_stats_df: pd.DataFrame,
+    bclconvert_data_df: pd.DataFrame
 ) -> FastqSet:
     """
     Append fastqs to the existing fastq set
@@ -439,15 +387,13 @@ def append_to_existing_fastq_set(
     allow_additional_fastqs_to_fastq_set(fastq_set_id=fastq_set['id'])
 
     # Create the new fastq list row objects from the inputs
-    new_fastq_fastq_list_rows = generate_fastq_list_row_list_from_inputs(
+    new_fastq_list_rows = generate_fastq_list_row_list_from_inputs(
         instrument_run_id=instrument_run_id,
-        bclconvert_data_df=bclconvert_data_df,
-        filenames_df=filenames_df,
-        demux_stats_df=demux_stats_df,
+        bclconvert_data_df=bclconvert_data_df
     )
 
     # Link each of the fastqs to the fastq set
-    for new_fastq_list_row in new_fastq_fastq_list_rows:
+    for new_fastq_list_row in new_fastq_list_rows:
         link_fastq_list_row_to_fastq_set(
             fastq_set_id=fastq_set['id'],
             fastq_id=new_fastq_list_row['id']
@@ -464,8 +410,6 @@ def replace_current_fastq_set(
         library_id: str,
         instrument_run_id: str,
         bclconvert_data_df: pd.DataFrame,
-        filenames_df: pd.DataFrame,
-        demux_stats_df: pd.DataFrame,
 ):
     """
     Rerun the fastq set -
@@ -498,29 +442,21 @@ def replace_current_fastq_set(
     return generate_fastq_set_from_inputs(
         instrument_run_id=instrument_run_id,
         bclconvert_data_df=bclconvert_data_df,
-        filenames_df=filenames_df,
-        demux_stats_df=demux_stats_df,
     )
 
 
 def generate_fastq_set_from_inputs(
         instrument_run_id: str,
-        bclconvert_data_df: pd.DataFrame,
-        filenames_df: pd.DataFrame,
-        demux_stats_df: pd.DataFrame,
-) -> dict:
+        bclconvert_data_df: pd.DataFrame
+) -> FastqSet:
     """
     Create the fastq set object from the input dataframes
     """
-    merged_df = merge_dataframes(bclconvert_data_df, filenames_df, demux_stats_df)
-
     # Create the fastq set object
-    fastq_set = create_fastq_set_from_df(
+    return create_fastq_set_from_df(
         instrument_run_id=instrument_run_id,
-        merged_df=merged_df,
+        bclconvert_data_df=bclconvert_data_df,
     )
-
-    return fastq_set
 
 
 def handler(event, context):
@@ -532,9 +468,8 @@ def handler(event, context):
     """
     # Get the inputs from the event
     instrument_run_id = event["instrumentRunId"]
-    bclconvert_data_df = pd.DataFrame(event["sampleBclConvertData"])
-    filenames_df = pd.DataFrame(event["sampleFileNames"])
-    demux_stats_df = pd.DataFrame(event["sampleDemuxStats"])
+    bclconvert_data_df = pd.DataFrame(event["bclConvertData"])
+    library_id = event['libraryId']
 
     # Check if has existing fastq set
     # If has existing fastq set for this instrument run id, we just return
@@ -563,18 +498,14 @@ def handler(event, context):
             return append_to_existing_fastq_set(
                 library_id=library_id,
                 instrument_run_id=instrument_run_id,
-                bclconvert_data_df=bclconvert_data_df,
-                filenames_df=filenames_df,
-                demux_stats_df=demux_stats_df,
+                bclconvert_data_df=bclconvert_data_df
             )
 
         if is_rerun(library_id):
             return replace_current_fastq_set(
                 library_id=library_id,
                 instrument_run_id=instrument_run_id,
-                bclconvert_data_df=bclconvert_data_df,
-                filenames_df=filenames_df,
-                demux_stats_df=demux_stats_df,
+                bclconvert_data_df=bclconvert_data_df
             )
 
         raise ValueError(
@@ -586,9 +517,7 @@ def handler(event, context):
     # Generate the fastq set object
     return generate_fastq_set_from_inputs(
         instrument_run_id=instrument_run_id,
-        bclconvert_data_df=bclconvert_data_df,
-        filenames_df=filenames_df,
-        demux_stats_df=demux_stats_df,
+        bclconvert_data_df=bclconvert_data_df
     )
 
 
@@ -603,342 +532,24 @@ def handler(event, context):
 #
 #     print(json.dumps(
 #         handler(
-#             {
-#                 "sampleId": "L2401544",
-#                 "sampleDemuxStats": [
-#                     {
-#                         "libraryId": "L2401544",
-#                         "lane": 2,
-#                         "readCount": 56913395
-#                     },
-#                     {
-#                         "libraryId": "L2401544",
-#                         "lane": 3,
-#                         "readCount": 62441372
-#                     }
-#                 ],
-#                 "sampleFileNames": [
-#                     {
-#                         "libraryId": "L2401544",
-#                         "lane": 2,
-#                         "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/241024_A00130_0336_BHW7MVDSXC/20250324abcd1234/Samples/Lane_2/L2401544/L2401544_S12_L002_R1_001.fastq.ora",
-#                         "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/241024_A00130_0336_BHW7MVDSXC/20250324abcd1234/Samples/Lane_2/L2401544/L2401544_S12_L002_R2_001.fastq.ora"
-#                     },
-#                     {
-#                         "libraryId": "L2401544",
-#                         "lane": 3,
-#                         "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/241024_A00130_0336_BHW7MVDSXC/20250324abcd1234/Samples/Lane_3/L2401544/L2401544_S12_L003_R1_001.fastq.ora",
-#                         "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/241024_A00130_0336_BHW7MVDSXC/20250324abcd1234/Samples/Lane_3/L2401544/L2401544_S12_L003_R2_001.fastq.ora"
-#                     }
-#                 ],
-#                 "sampleBclConvertData": [
-#                     {
-#                         "libraryId": "L2401544",
-#                         "index": "CAAGCTAG+CGCTATGT",
-#                         "lane": 2,
-#                         "cycleCount": 302
-#                     },
-#                     {
-#                         "libraryId": "L2401544",
-#                         "index": "CAAGCTAG+CGCTATGT",
-#                         "lane": 3,
-#                         "cycleCount": 302
-#                     }
-#                 ],
-#                 "instrumentRunId": "241024_A00130_0336_BHW7MVDSXC",
-#             },
+#              {
+#                  "libraryId": "L2500175",
+#                  "bclConvertData": [
+#                      {
+#                          "libraryId": "L2500175",
+#                          "index": "AACTGTAG+TGCGGCGT",
+#                          "lane": 3,
+#                          "cycleCount": 302
+#                      },
+#                      {
+#                          "libraryId": "L2500175",
+#                          "index": "AACTGTAG+TGCGGCGT",
+#                          "lane": 4,
+#                          "cycleCount": 302
+#                      }
+#                  ]
+#              },
 #             None
 #         ),
 #         indent=4
 #     ))
-#
-#     # {
-#     #     "id": "fqs.01JQ3B08TYFDPM8Z6ZXDFN9C2X",
-#     #     "library": {
-#     #         "orcabusId": "lib.01JBB5Y3QGZSGF74W6CTV0JJ16",
-#     #         "libraryId": "L2401544"
-#     #     },
-#     #     "fastqSet": [
-#     #         {
-#     #             "id": "fqr.01JQ3B08PZYHF9JJVKE3SMQQFP",
-#     #             "fastqSetId": "fqs.01JQ3B08TYFDPM8Z6ZXDFN9C2X",
-#     #             "index": "CAAGCTAG+CGCTATGT",
-#     #             "lane": 2,
-#     #             "instrumentRunId": "241024_A00130_0336_BHW7MVDSXC",
-#     #             "library": {
-#     #                 "orcabusId": "lib.01JBB5Y3QGZSGF74W6CTV0JJ16",
-#     #                 "libraryId": "L2401544"
-#     #             },
-#     #             "platform": "Illumina",
-#     #             "center": "UMCCR",
-#     #             "date": "2024-10-24T00:00:00",
-#     #             "readSet": {
-#     #                 "r1": {
-#     #                     "ingestId": "0195c5fb-018d-7003-863c-67214a67fef7",
-#     #                     "s3Uri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/241024_A00130_0336_BHW7MVDSXC/20250324abcd1234/Samples/Lane_2/L2401544/L2401544_S12_L002_R1_001.fastq.ora",
-#     #                     "storageClass": "Standard",
-#     #                     "gzipCompressionSizeInBytes": null,
-#     #                     "rawMd5sum": null
-#     #                 },
-#     #                 "r2": {
-#     #                     "ingestId": "0195c5fb-0628-7873-86d0-194d0a3bd32b",
-#     #                     "s3Uri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/241024_A00130_0336_BHW7MVDSXC/20250324abcd1234/Samples/Lane_2/L2401544/L2401544_S12_L002_R2_001.fastq.ora",
-#     #                     "storageClass": "Standard",
-#     #                     "gzipCompressionSizeInBytes": null,
-#     #                     "rawMd5sum": null
-#     #                 },
-#     #                 "compressionFormat": "ORA"
-#     #             },
-#     #             "qc": null,
-#     #             "ntsm": null,
-#     #             "readCount": 56913395,
-#     #             "baseCountEst": 113826790,
-#     #             "isValid": true
-#     #         },
-#     #         {
-#     #             "id": "fqr.01JQ3B08RWZMTBC4M4DVMJY2R4",
-#     #             "fastqSetId": "fqs.01JQ3B08TYFDPM8Z6ZXDFN9C2X",
-#     #             "index": "CAAGCTAG+CGCTATGT",
-#     #             "lane": 3,
-#     #             "instrumentRunId": "241024_A00130_0336_BHW7MVDSXC",
-#     #             "library": {
-#     #                 "orcabusId": "lib.01JBB5Y3QGZSGF74W6CTV0JJ16",
-#     #                 "libraryId": "L2401544"
-#     #             },
-#     #             "platform": "Illumina",
-#     #             "center": "UMCCR",
-#     #             "date": "2024-10-24T00:00:00",
-#     #             "readSet": {
-#     #                 "r1": {
-#     #                     "ingestId": "0195c5fb-2d9b-7640-8120-3afc60bfeb9e",
-#     #                     "s3Uri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/241024_A00130_0336_BHW7MVDSXC/20250324abcd1234/Samples/Lane_3/L2401544/L2401544_S12_L003_R1_001.fastq.ora",
-#     #                     "storageClass": "Standard",
-#     #                     "gzipCompressionSizeInBytes": null,
-#     #                     "rawMd5sum": null
-#     #                 },
-#     #                 "r2": {
-#     #                     "ingestId": "0195c5fb-3072-7010-ab86-aae7adb1ac4e",
-#     #                     "s3Uri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/241024_A00130_0336_BHW7MVDSXC/20250324abcd1234/Samples/Lane_3/L2401544/L2401544_S12_L003_R2_001.fastq.ora",
-#     #                     "storageClass": "Standard",
-#     #                     "gzipCompressionSizeInBytes": null,
-#     #                     "rawMd5sum": null
-#     #                 },
-#     #                 "compressionFormat": "ORA"
-#     #             },
-#     #             "qc": null,
-#     #             "ntsm": null,
-#     #             "readCount": 62441372,
-#     #             "baseCountEst": 124882744,
-#     #             "isValid": true
-#     #         }
-#     #     ],
-#     #     "allowAdditionalFastq": false,
-#     #     "isCurrentFastqSet": true
-#     # }
-
-
-# if __name__ == "__main__":
-#     import json
-#     from os import environ
-#
-#     environ['AWS_PROFILE'] = 'umccr-development'
-#     environ['AWS_REGION'] = 'ap-southeast-2'
-#     environ['ORCABUS_TOKEN_SECRET_ID'] = 'orcabus/token-service-jwt'
-#     environ['HOSTNAME_SSM_PARAMETER'] = '/hosted_zone/umccr/name'
-#
-#     print(json.dumps(
-#         handler(
-#             {
-#                 "sampleId": "L2401544",
-#                 "sampleDemuxStats": [
-#                     {
-#                         "libraryId": "L2401544",
-#                         "lane": 2,
-#                         "readCount": 56913395
-#                     },
-#                     {
-#                         "libraryId": "L2401544",
-#                         "lane": 3,
-#                         "readCount": 62441372
-#                     }
-#                 ],
-#                 "sampleFileNames": [
-#                     {
-#                         "libraryId": "L2401544",
-#                         "lane": 2,
-#                         "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/241024_A00130_0336_BHW7MVDSXC/20250324abcd1234/Samples/Lane_2/L2401544/L2401544_S12_L002_R1_001.fastq.ora",
-#                         "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/241024_A00130_0336_BHW7MVDSXC/20250324abcd1234/Samples/Lane_2/L2401544/L2401544_S12_L002_R2_001.fastq.ora"
-#                     },
-#                     {
-#                         "libraryId": "L2401544",
-#                         "lane": 3,
-#                         "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/241024_A00130_0336_BHW7MVDSXC/20250324abcd1234/Samples/Lane_3/L2401544/L2401544_S12_L003_R1_001.fastq.ora",
-#                         "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/241024_A00130_0336_BHW7MVDSXC/20250324abcd1234/Samples/Lane_3/L2401544/L2401544_S12_L003_R2_001.fastq.ora"
-#                     }
-#                 ],
-#                 "sampleBclConvertData": [
-#                     {
-#                         "libraryId": "L2401544",
-#                         "index": "CAAGCTAG+CGCTATGT",
-#                         "lane": 2,
-#                         "cycleCount": 302
-#                     },
-#                     {
-#                         "libraryId": "L2401544",
-#                         "index": "CAAGCTAG+CGCTATGT",
-#                         "lane": 3,
-#                         "cycleCount": 302
-#                     }
-#                 ],
-#                 "instrumentRunId": "241024_A00130_0336_BHW7MVDSXC",
-#             },
-#             None
-#         ),
-#         indent=4
-#     ))
-
-
-
-# if __name__ == "__main__":
-#     import json
-#     from os import environ
-#
-#     environ['AWS_PROFILE'] = 'umccr-development'
-#     environ['AWS_REGION'] = 'ap-southeast-2'
-#     environ['ORCABUS_TOKEN_SECRET_ID'] = 'orcabus/token-service-jwt'
-#     environ['HOSTNAME_SSM_PARAMETER'] = '/hosted_zone/umccr/name'
-#
-#     print(json.dumps(
-#         handler(
-#             {
-#                 "sampleId": "L2401544",
-#                 "sampleDemuxStats": [
-#                     {
-#                         "libraryId": "L2401544",
-#                         "lane": 2,
-#                         "readCount": 56913395
-#                     },
-#                     {
-#                         "libraryId": "L2401544",
-#                         "lane": 3,
-#                         "readCount": 62441372
-#                     }
-#                 ],
-#                 "sampleFileNames": [
-#                     {
-#                         "libraryId": "L2401544",
-#                         "lane": 2,
-#                         "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/241024_A00130_0336_BHW7MVDSXC/20250324abcd1234/Samples/Lane_2/L2401544/L2401544_S12_L002_R1_001.fastq.ora",
-#                         "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/241024_A00130_0336_BHW7MVDSXC/20250324abcd1234/Samples/Lane_2/L2401544/L2401544_S12_L002_R2_001.fastq.ora"
-#                     },
-#                     {
-#                         "libraryId": "L2401544",
-#                         "lane": 3,
-#                         "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/241024_A00130_0336_BHW7MVDSXC/20250324abcd1234/Samples/Lane_3/L2401544/L2401544_S12_L003_R1_001.fastq.ora",
-#                         "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/241024_A00130_0336_BHW7MVDSXC/20250324abcd1234/Samples/Lane_3/L2401544/L2401544_S12_L003_R2_001.fastq.ora"
-#                     }
-#                 ],
-#                 "sampleBclConvertData": [
-#                     {
-#                         "libraryId": "L2401544",
-#                         "index": "CAAGCTAG+CGCTATGT",
-#                         "lane": 2,
-#                         "cycleCount": 302
-#                     },
-#                     {
-#                         "libraryId": "L2401544",
-#                         "index": "CAAGCTAG+CGCTATGT",
-#                         "lane": 3,
-#                         "cycleCount": 302
-#                     }
-#                 ],
-#                 "instrumentRunId": "241024_A00130_0336_BHW7MVDSXC",
-#             },
-#             None
-#         ),
-#         indent=4
-#     ))
-#
-#     # {
-#     #     "id": "fqs.01JQ3B08TYFDPM8Z6ZXDFN9C2X",
-#     #     "library": {
-#     #         "orcabusId": "lib.01JBB5Y3QGZSGF74W6CTV0JJ16",
-#     #         "libraryId": "L2401544"
-#     #     },
-#     #     "fastqSet": [
-#     #         {
-#     #             "id": "fqr.01JQ3B08PZYHF9JJVKE3SMQQFP",
-#     #             "fastqSetId": "fqs.01JQ3B08TYFDPM8Z6ZXDFN9C2X",
-#     #             "index": "CAAGCTAG+CGCTATGT",
-#     #             "lane": 2,
-#     #             "instrumentRunId": "241024_A00130_0336_BHW7MVDSXC",
-#     #             "library": {
-#     #                 "orcabusId": "lib.01JBB5Y3QGZSGF74W6CTV0JJ16",
-#     #                 "libraryId": "L2401544"
-#     #             },
-#     #             "platform": "Illumina",
-#     #             "center": "UMCCR",
-#     #             "date": "2024-10-24T00:00:00",
-#     #             "readSet": {
-#     #                 "r1": {
-#     #                     "ingestId": "0195c5fb-018d-7003-863c-67214a67fef7",
-#     #                     "s3Uri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/241024_A00130_0336_BHW7MVDSXC/20250324abcd1234/Samples/Lane_2/L2401544/L2401544_S12_L002_R1_001.fastq.ora",
-#     #                     "storageClass": "Standard",
-#     #                     "gzipCompressionSizeInBytes": null,
-#     #                     "rawMd5sum": null
-#     #                 },
-#     #                 "r2": {
-#     #                     "ingestId": "0195c5fb-0628-7873-86d0-194d0a3bd32b",
-#     #                     "s3Uri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/241024_A00130_0336_BHW7MVDSXC/20250324abcd1234/Samples/Lane_2/L2401544/L2401544_S12_L002_R2_001.fastq.ora",
-#     #                     "storageClass": "Standard",
-#     #                     "gzipCompressionSizeInBytes": null,
-#     #                     "rawMd5sum": null
-#     #                 },
-#     #                 "compressionFormat": "ORA"
-#     #             },
-#     #             "qc": null,
-#     #             "ntsm": null,
-#     #             "readCount": 56913395,
-#     #             "baseCountEst": 113826790,
-#     #             "isValid": true
-#     #         },
-#     #         {
-#     #             "id": "fqr.01JQ3B08RWZMTBC4M4DVMJY2R4",
-#     #             "fastqSetId": "fqs.01JQ3B08TYFDPM8Z6ZXDFN9C2X",
-#     #             "index": "CAAGCTAG+CGCTATGT",
-#     #             "lane": 3,
-#     #             "instrumentRunId": "241024_A00130_0336_BHW7MVDSXC",
-#     #             "library": {
-#     #                 "orcabusId": "lib.01JBB5Y3QGZSGF74W6CTV0JJ16",
-#     #                 "libraryId": "L2401544"
-#     #             },
-#     #             "platform": "Illumina",
-#     #             "center": "UMCCR",
-#     #             "date": "2024-10-24T00:00:00",
-#     #             "readSet": {
-#     #                 "r1": {
-#     #                     "ingestId": "0195c5fb-2d9b-7640-8120-3afc60bfeb9e",
-#     #                     "s3Uri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/241024_A00130_0336_BHW7MVDSXC/20250324abcd1234/Samples/Lane_3/L2401544/L2401544_S12_L003_R1_001.fastq.ora",
-#     #                     "storageClass": "Standard",
-#     #                     "gzipCompressionSizeInBytes": null,
-#     #                     "rawMd5sum": null
-#     #                 },
-#     #                 "r2": {
-#     #                     "ingestId": "0195c5fb-3072-7010-ab86-aae7adb1ac4e",
-#     #                     "s3Uri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/241024_A00130_0336_BHW7MVDSXC/20250324abcd1234/Samples/Lane_3/L2401544/L2401544_S12_L003_R2_001.fastq.ora",
-#     #                     "storageClass": "Standard",
-#     #                     "gzipCompressionSizeInBytes": null,
-#     #                     "rawMd5sum": null
-#     #                 },
-#     #                 "compressionFormat": "ORA"
-#     #             },
-#     #             "qc": null,
-#     #             "ntsm": null,
-#     #             "readCount": 62441372,
-#     #             "baseCountEst": 124882744,
-#     #             "isValid": true
-#     #         }
-#     #     ],
-#     #     "allowAdditionalFastq": false,
-#     #     "isCurrentFastqSet": true
-#     # }

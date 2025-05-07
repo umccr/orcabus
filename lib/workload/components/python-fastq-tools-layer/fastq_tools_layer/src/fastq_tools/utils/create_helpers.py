@@ -11,32 +11,41 @@ Update helpers for the update script.
 - validate
 - invalidate
 """
+from typing import Unpack
 
 # Standard imports
 
 # Local imports
 from .globals import FASTQ_LIST_ROW_ENDPOINT, FASTQ_SET_ENDPOINT
 from .request_helpers import post_request
-from .models import FastqListRow, FastqSet, FastqListRowCreate, FastqSetCreate
+from .models import FastqListRow, FastqSet, FastqListRowCreateParams, FastqSetCreateParams
 
 
-def create_fastq_list_row_object(fastq_list_row_create_dict: FastqListRowCreate) -> FastqListRow:
+def create_fastq_list_row_object(**kwargs: Unpack[FastqListRowCreateParams]) -> FastqListRow:
     """
     Add a fastq list row object to the database.
     Returns the created fastq list row object
     """
-    return post_request(
-        f"{FASTQ_LIST_ROW_ENDPOINT}",
-        params=fastq_list_row_create_dict
+    return FastqListRow(
+        **dict(
+            post_request(
+                f"{FASTQ_LIST_ROW_ENDPOINT}",
+                params=dict(kwargs)
+            )
+        )
     )
 
 
-def create_fastq_set_object(fastq_set_create_dict: FastqSetCreate) -> FastqSet:
+def create_fastq_set_object(**kwargs: Unpack[FastqSetCreateParams]) -> FastqSet:
     """
     Add a fastq list row object to the database.
     Returns the created fastq list row object
     """
-    return post_request(
-        f"{FASTQ_SET_ENDPOINT}",
-        params=fastq_set_create_dict
+    return FastqSet(
+        **dict(
+            post_request(
+                f"{FASTQ_SET_ENDPOINT}",
+                params=dict(kwargs)
+            )
+        )
     )
