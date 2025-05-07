@@ -1,0 +1,124 @@
+{
+  "Comment": "A description of my state machine",
+  "StartAt": "FastqListRow Event Shower Starting",
+  "States": {
+    "FastqListRow Event Shower Starting": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::events:putEvents.waitForTaskToken",
+      "Arguments": {
+        "Entries": [
+          {
+            "Detail": {
+              "Message": "Hello from Step Functions!",
+              "TaskToken": "{% $states.context.Task.Token %}"
+            },
+            "DetailType": "MyDetailType",
+            "EventBusName": "MyEventBusName",
+            "Source": "MySource"
+          }
+        ]
+      },
+      "Next": "Get FQLR IDs in FastqManager"
+    },
+    "Get FQLR IDs in FastqManager": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Output": "{% $states.result.Payload %}",
+      "Arguments": {
+        "FunctionName": "",
+        "Payload": "{% $states.input %}"
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2,
+          "JitterStrategy": "FULL"
+        }
+      ],
+      "Next": "For each FQLR ID"
+    },
+    "For each FQLR ID": {
+      "Type": "Map",
+      "ItemProcessor": {
+        "ProcessorConfig": {
+          "Mode": "DISTRIBUTED",
+          "ExecutionType": "STANDARD"
+        },
+        "StartAt": "Get FQLR Object",
+        "States": {
+          "Get FQLR Object": {
+            "Type": "Task",
+            "Resource": "arn:aws:states:::lambda:invoke",
+            "Output": "{% $states.result.Payload %}",
+            "Arguments": {
+              "FunctionName": "",
+              "Payload": "{% $states.input %}"
+            },
+            "Retry": [
+              {
+                "ErrorEquals": [
+                  "Lambda.ServiceException",
+                  "Lambda.AWSLambdaException",
+                  "Lambda.SdkClientException",
+                  "Lambda.TooManyRequestsException"
+                ],
+                "IntervalSeconds": 1,
+                "MaxAttempts": 3,
+                "BackoffRate": 2,
+                "JitterStrategy": "FULL"
+              }
+            ],
+            "Next": "Put New Fastq List Row Event"
+          },
+          "Put New Fastq List Row Event": {
+            "Type": "Task",
+            "Resource": "arn:aws:states:::events:putEvents.waitForTaskToken",
+            "Arguments": {
+              "Entries": [
+                {
+                  "Detail": {
+                    "Message": "Hello from Step Functions!",
+                    "TaskToken": "{% $states.context.Task.Token %}"
+                  },
+                  "DetailType": "MyDetailType",
+                  "EventBusName": "MyEventBusName",
+                  "Source": "MySource"
+                }
+              ]
+            },
+            "End": true
+          }
+        }
+      },
+      "Label": "ForeachFQLRID",
+      "MaxConcurrency": 1000,
+      "Next": "FastqListRow Event Shower Completed"
+    },
+    "FastqListRow Event Shower Completed": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::events:putEvents.waitForTaskToken",
+      "Arguments": {
+        "Entries": [
+          {
+            "Detail": {
+              "Message": "Hello from Step Functions!",
+              "TaskToken": "{% $states.context.Task.Token %}"
+            },
+            "DetailType": "MyDetailType",
+            "EventBusName": "MyEventBusName",
+            "Source": "MySource"
+          }
+        ]
+      },
+      "End": true
+    }
+  },
+  "QueryLanguage": "JSONata"
+}
