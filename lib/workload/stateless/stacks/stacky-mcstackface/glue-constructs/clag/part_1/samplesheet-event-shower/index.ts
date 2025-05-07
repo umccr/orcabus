@@ -4,10 +4,19 @@ import * as sfn from 'aws-cdk-lib/aws-stepfunctions';
 import * as events from 'aws-cdk-lib/aws-events';
 import * as eventsTargets from 'aws-cdk-lib/aws-events-targets';
 import path from 'path';
-import { LambdaB64GzTranslatorConstruct } from '../../../../../../../components/python-lambda-b64gz-translator';
-import { GetLibraryObjectsFromSamplesheetConstruct } from '../../../../../../../components/python-lambda-get-metadata-objects-from-samplesheet';
-import { PythonFunction } from '@aws-cdk/aws-lambda-python-alpha';
-import { Architecture, Runtime } from 'aws-cdk-lib/aws-lambda';
+import { PythonUvFunction } from '../../../../../../../components/uv-python-lambda-image-builder';
+import * as lambda from 'aws-cdk-lib/aws-lambda';
+import * as secretsManager from 'aws-cdk-lib/aws-secretsmanager';
+import * as ssm from 'aws-cdk-lib/aws-ssm';
+import * as iam from 'aws-cdk-lib/aws-iam';
+import {
+  hostedZoneNameParameterPath,
+  jwtSecretName,
+} from '../../../../../../../../../config/constants';
+import * as cdk from 'aws-cdk-lib';
+import { NagSuppressions } from 'cdk-nag';
+import { MetadataToolsPythonLambdaLayer } from '../../../../../../../components/python-metadata-tools-layer';
+import { Duration } from 'aws-cdk-lib';
 
 export interface NewSamplesheetEventShowerConstructProps {
   tableObj: dynamodb.ITableV2;
@@ -52,44 +61,73 @@ export class NewSamplesheetEventShowerConstruct extends Construct {
     super(scope, id);
 
     /*
-        Part 1: Build lambdas
-        */
-
-    // Decompression lambda
-    const decompressSamplesheetLambda = new LambdaB64GzTranslatorConstruct(
+    Part 0: Get tokens and ssm parameters
+    */
+    const jwtTokenSecretObj = secretsManager.Secret.fromSecretNameV2(
       this,
-      'lambda_b64gz_translator_lambda',
-      {
-        functionNamePrefix: this.newSamplesheetEventShowerMap.prefix,
-      }
-    ).lambdaObj;
+      'jwt_token_secret',
+      jwtSecretName
+    );
 
-    // Get Library / Subject Map from Samplesheet
-    const getLibrarySubjectMapLambda = new GetLibraryObjectsFromSamplesheetConstruct(
+    const hostnameSsmParameterObj = ssm.StringParameter.fromStringParameterName(
       this,
-      'get_library_subject_map_lambda',
-      {
-        functionNamePrefix: this.newSamplesheetEventShowerMap.prefix,
-      }
-    ).lambdaObj;
-
-    // Generate Data Objects from SampleSheet lambda (local lambda)
-    // Translate the libraryrunstatechange event
-    const generateEventDataObjsLambda = new PythonFunction(
-      this,
-      'generate_event_data_objects_lambda',
-      {
-        entry: path.join(__dirname, 'lambdas', 'generate_event_data_objects_py'),
-        index: 'generate_event_data_objects.py',
-        handler: 'handler',
-        runtime: Runtime.PYTHON_3_12,
-        architecture: Architecture.ARM_64,
-      }
+      'hostname_ssm_parameter',
+      hostedZoneNameParameterPath
     );
 
     /*
-        Part 2: Build state machine
-        */
+    Part 1: Build lambda layers
+    */
+    const metadataToolsLayer = new MetadataToolsPythonLambdaLayer(this, 'metadata-tools-layer', {
+      layerPrefix: 'clag',
+    }).lambdaLayerVersionObj;
+
+    /*
+    Part 1: Build lambdas
+    */
+
+    // Decompress samplesheet
+    const getLibraryIdsFromGzippedSampleSheetLambdaFunction = new PythonUvFunction(
+      this,
+      'get_library_id_from_gzipped_samplesheet_lambda',
+      {
+        entry: path.join(__dirname, 'lambdas/get_library_ids_from_gzipped_samplesheet_py'),
+        runtime: lambda.Runtime.PYTHON_3_12,
+        architecture: lambda.Architecture.ARM_64,
+        index: 'get_library_ids_from_gzipped_samplesheet.py',
+        handler: 'handler',
+        memorySize: 2048,
+      }
+    );
+
+    // Generate library event data
+    const generateLibraryEventDataLambdaFunction = new PythonUvFunction(
+      this,
+      'generate_library_event_data_lambda',
+      {
+        entry: path.join(__dirname, 'lambdas/generate_library_event_data_objects_py'),
+        runtime: lambda.Runtime.PYTHON_3_12,
+        architecture: lambda.Architecture.ARM_64,
+        index: 'generate_library_event_data_objects.py',
+        handler: 'handler',
+        memorySize: 2048,
+        environment: {
+          /* SSM and Secrets Manager env vars */
+          HOSTNAME_SSM_PARAMETER: hostnameSsmParameterObj.parameterName,
+          ORCABUS_TOKEN_SECRET_ID: jwtTokenSecretObj.secretName,
+        },
+        timeout: Duration.seconds(60),
+        layers: [metadataToolsLayer],
+      }
+    );
+
+    // generateLibraryEventDataLambdaFunction needs permissions to read the secret and ssm parameter
+    jwtTokenSecretObj.grantRead(generateLibraryEventDataLambdaFunction.currentVersion);
+    hostnameSsmParameterObj.grantRead(generateLibraryEventDataLambdaFunction.currentVersion);
+
+    /*
+    Part 2: Build state machine
+    */
     this.stateMachineObj = new sfn.StateMachine(this, 'update_database_on_new_samplesheet_sfn', {
       stateMachineName: `${this.newSamplesheetEventShowerMap.prefix}-sfn`,
       definitionBody: sfn.DefinitionBody.fromFile(
@@ -113,22 +151,6 @@ export class NewSamplesheetEventShowerConstruct extends Construct {
         __start_samplesheet_shower_status__:
           this.newSamplesheetEventShowerMap.outputStatus.startEventShower,
 
-        // Project In Samplesheet
-        __project_in_samplesheet_detail_type__:
-          this.newSamplesheetEventShowerMap.outputDetailType.metadataInSampleSheet,
-        __project_in_samplesheet_status__:
-          this.newSamplesheetEventShowerMap.outputStatus.projectInSamplesheet,
-        __project_in_samplesheet_payload_version__:
-          this.newSamplesheetEventShowerMap.outputPayloadVersion,
-
-        // Subject In Samplesheet
-        __subject_in_samplesheet_detail_type__:
-          this.newSamplesheetEventShowerMap.outputDetailType.metadataInSampleSheet,
-        __subject_in_samplesheet_payload_version__:
-          this.newSamplesheetEventShowerMap.outputPayloadVersion,
-        __subject_in_samplesheet_status__:
-          this.newSamplesheetEventShowerMap.outputStatus.subjectInSamplesheet,
-
         // Library In Samplesheet
         __library_in_samplesheet_detail_type__:
           this.newSamplesheetEventShowerMap.outputDetailType.metadataInSampleSheet,
@@ -147,19 +169,15 @@ export class NewSamplesheetEventShowerConstruct extends Construct {
 
         /* Table settings */
         __table_name__: props.tableObj.tableName,
-        __subject_table_partition_name__: this.newSamplesheetEventShowerMap.tablePartition.subject,
         __library_table_partition_name__: this.newSamplesheetEventShowerMap.tablePartition.library,
         __instrument_run_table_partition_name__:
           this.newSamplesheetEventShowerMap.tablePartition.instrumentRun,
-        __project_table_partition_name__: this.newSamplesheetEventShowerMap.tablePartition.project,
 
         // Lambdas
-        __decompress_samplesheet_function_arn__:
-          decompressSamplesheetLambda.currentVersion.functionArn,
-        __get_subject_library_map_from_samplesheet_lambda_function_arn__:
-          getLibrarySubjectMapLambda.currentVersion.functionArn,
-        __generate_event_objects_lambda_function_arn__:
-          generateEventDataObjsLambda.currentVersion.functionArn,
+        __get_library_ids_from_gzipped_samplesheet_lambda_function_arn__:
+          getLibraryIdsFromGzippedSampleSheetLambdaFunction.currentVersion.functionArn,
+        __get_library_object_and_event_data_from_metadata_api_lambda_function_arn__:
+          generateLibraryEventDataLambdaFunction.currentVersion.functionArn,
       },
     });
 
@@ -171,14 +189,54 @@ export class NewSamplesheetEventShowerConstruct extends Construct {
     props.tableObj.grantReadWriteData(this.stateMachineObj);
 
     /* Allow state machine to invoke lambda */
-    [decompressSamplesheetLambda, getLibrarySubjectMapLambda, generateEventDataObjsLambda].forEach(
-      (lambda) => {
-        lambda.currentVersion.grantInvoke(this.stateMachineObj.role);
-      }
-    );
+    [
+      getLibraryIdsFromGzippedSampleSheetLambdaFunction,
+      generateLibraryEventDataLambdaFunction,
+    ].forEach((lambda) => {
+      lambda.currentVersion.grantInvoke(this.stateMachineObj);
+    });
 
     /* Allow state machine to send events */
     props.eventBusObj.grantPutEventsTo(this.stateMachineObj);
+
+    /* State machine runs a distributed map */
+    // Because this steps execution uses a distributed map running an express step function, we
+    // have to wire up some extra permissions
+    // Grant the state machine's role to execute itself
+    // However we cannot just grant permission to the role as this will result in a circular dependency
+    // between the state machine and the role
+    // Instead we use the workaround here - https://github.com/aws/aws-cdk/issues/28820#issuecomment-1936010520
+    const distributedMapPolicy = new iam.Policy(this, 'sfn-distributed-map-policy', {
+      document: new iam.PolicyDocument({
+        statements: [
+          new iam.PolicyStatement({
+            resources: [this.stateMachineObj.stateMachineArn],
+            actions: ['states:StartExecution'],
+          }),
+          new iam.PolicyStatement({
+            resources: [
+              `arn:aws:states:${cdk.Aws.REGION}:${cdk.Aws.ACCOUNT_ID}:execution:${this.stateMachineObj.stateMachineName}/*:*`,
+            ],
+            actions: ['states:RedriveExecution'],
+          }),
+        ],
+      }),
+    });
+    // Add the policy to the state machine role
+    this.stateMachineObj.role.attachInlinePolicy(distributedMapPolicy);
+
+    // Add in the nag suppressions
+    NagSuppressions.addResourceSuppressions(
+      [this.stateMachineObj, distributedMapPolicy],
+      [
+        {
+          id: 'AwsSolutions-IAM5',
+          reason:
+            'statemachine needs wild card permissions on itself because of the distributed map nature of the state machine',
+        },
+      ],
+      true
+    );
 
     /*
     Part 4: Build event rule

@@ -113,8 +113,6 @@ export class NewFastqListRowsEventShowerConstruct extends Construct {
           INSTRUMENT_RUN_TABLE_NAME: props.tableObj.tableName,
           FASTQ_LIST_ROW_EVENT_OBJ_TABLE_PARTITION_NAME:
             this.newFastqListRowsEventShowerMap.tablePartition.fastqListRowEvent,
-          PROJECT_EVENT_OBJ_TABLE_PARTITION_NAME:
-            this.newFastqListRowsEventShowerMap.tablePartition.projectEvent,
         },
       }
     );

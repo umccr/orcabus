@@ -389,75 +389,11 @@
               "End": true
             }
           }
-        },
-        {
-          "StartAt": "Get Projects in Instrument Run",
-          "States": {
-            "Get Projects in Instrument Run": {
-              "Type": "Task",
-              "Resource": "arn:aws:states:::dynamodb:getItem",
-              "Parameters": {
-                "TableName": "${__table_name__}",
-                "Key": {
-                  "id.$": "$.inputs.payload.data.outputs.instrumentRunId",
-                  "id_type": "${__instrument_run_table_partition_name__}"
-                }
-              },
-              "ResultSelector": {
-                "project_orcabus_ids.$": "$.Item.project_set.SS"
-              },
-              "ResultPath": "$.get_projects_step",
-              "Next": "Get Project Objects Map"
-            },
-            "Get Project Objects Map": {
-              "Type": "Map",
-              "ItemsPath": "$.get_projects_step.project_orcabus_ids",
-              "ItemSelector": {
-                "project_orcabus_id.$": "$$.Map.Item.Value"
-              },
-              "ItemProcessor": {
-                "ProcessorConfig": {
-                  "Mode": "INLINE"
-                },
-                "StartAt": "Get Project",
-                "States": {
-                  "Get Project": {
-                    "Type": "Task",
-                    "Resource": "arn:aws:states:::dynamodb:getItem",
-                    "Parameters": {
-                      "TableName": "${__table_name__}",
-                      "Key": {
-                        "id.$": "$.project_orcabus_id",
-                        "id_type": "${__project_table_partition_name__}"
-                      }
-                    },
-                    "ResultSelector": {
-                      "project_obj.$": "States.StringToJson($.Item.project_obj.S)",
-                      "library_orcabus_ids_set.$": "$.Item.library_set.SS"
-                    },
-                    "Next": "Append library set to project object"
-                  },
-                  "Append library set to project object": {
-                    "Type": "Pass",
-                    "End": true,
-                    "Parameters": {
-                      "project_obj.$": "States.JsonMerge($.project_obj, States.StringToJson(States.Format('\\{\"librarySet\":{}\\}', $.library_orcabus_ids_set)), false)"
-                    }
-                  }
-                }
-              },
-              "ResultSelector": {
-                "project_objects_list.$": "$.[*].project_obj"
-              },
-              "End": true
-            }
-          }
         }
       ],
       "ResultSelector": {
         "fastq_list_rows.$": "$.[0].pre_steps_to_rapid_qc_steps.fastq_list_rows",
-        "library_objects_list.$": "$.[1].library_objects_list",
-        "project_objects_list.$": "$.[2].project_objects_list"
+        "library_objects_list.$": "$.[1].library_objects_list"
       },
       "ResultPath": "$.get_inputs_step"
     },
@@ -469,7 +405,6 @@
         "Payload": {
           "fastq_list_rows.$": "$.get_inputs_step.fastq_list_rows",
           "library_objs.$": "$.get_inputs_step.library_objects_list",
-          "project_objs.$": "$.get_inputs_step.project_objects_list",
           "instrument_run_id.$": "$.inputs.payload.data.outputs.instrumentRunId"
         }
       },
@@ -513,62 +448,6 @@
             "Source": "${__event_source__}"
           }
         ]
-      },
-      "ResultPath": null,
-      "Next": "For each Project"
-    },
-    "For each Project": {
-      "Type": "Map",
-      "ItemsPath": "$.get_inputs_step.project_objects_list",
-      "ItemSelector": {
-        "project_obj.$": "$$.Map.Item.Value",
-        "instrument_run_id.$": "$.inputs.payload.data.outputs.instrumentRunId"
-      },
-      "ItemProcessor": {
-        "ProcessorConfig": {
-          "Mode": "INLINE"
-        },
-        "StartAt": "Get Project Event Data Item",
-        "States": {
-          "Get Project Event Data Item": {
-            "Type": "Task",
-            "Resource": "arn:aws:states:::dynamodb:getItem",
-            "Parameters": {
-              "TableName": "${__table_name__}",
-              "Key": {
-                "id.$": "States.Format('{}__{}', $.project_obj.orcabusId, $.instrument_run_id)",
-                "id_type": "${__project_event_table_partition_name__}"
-              }
-            },
-            "ResultSelector": {
-              "project_event_data.$": "States.StringToJson($.Item.event_data.S)"
-            },
-            "ResultPath": "$.project_event_data",
-            "Next": "Generate ProjectData Added Event"
-          },
-          "Generate ProjectData Added Event": {
-            "Type": "Task",
-            "Resource": "arn:aws:states:::events:putEvents",
-            "Parameters": {
-              "Entries": [
-                {
-                  "Detail": {
-                    "timestamp.$": "$$.Execution.StartTime",
-                    "status": "${__project_data_available_status__}",
-                    "payload": {
-                      "version": "${__project_data_payload_version__}",
-                      "data.$": "$.project_event_data"
-                    }
-                  },
-                  "DetailType": "${__project_data_available_detail_type__}",
-                  "EventBusName": "${__event_bus_name__}",
-                  "Source": "${__event_source__}"
-                }
-              ]
-            },
-            "End": true
-          }
-        }
       },
       "ResultPath": null,
       "Next": "For each fastq list row pair"
