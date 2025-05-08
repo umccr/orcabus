@@ -1,0 +1,245 @@
+{
+  "Comment": "A description of my state machine",
+  "StartAt": "Set inputs variables",
+  "States": {
+    "Set inputs variables": {
+      "Type": "Pass",
+      "Next": "Secondary variables",
+      "Assign": {
+        "outputUri": "{% $states.input.outputUri %}",
+        "instrumentRunId": "{% $states.input.instrumentRunId %}"
+      }
+    },
+    "Secondary variables": {
+      "Type": "Pass",
+      "Next": "Get Libraries in Instrument Run ID",
+      "Assign": {
+        "fastqListUri": "{% $outputUri & 'Reports/fastq_list.csv' %}",
+        "demuxStatsUri": "{% $outputUri & 'Reports/DemultiplexStats.csv' %}"
+      }
+    },
+    "Get Libraries in Instrument Run ID": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Arguments": {
+        "FunctionName": "${__get_library_id_list_from_samplesheet_lambda_function_arn__}",
+        "Payload": {
+          "instrumentRunId": "{% $instrumentRunId %}"
+        }
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2,
+          "JitterStrategy": "FULL"
+        }
+      ],
+      "Next": "For each library (batched)",
+      "Output": {
+        "libraryIdList": "{% $states.result.Payload.libraryIdList %}"
+      }
+    },
+    "For each library (batched)": {
+      "Type": "Map",
+      "Label": "Foreachlibrarybatched",
+      "MaxConcurrency": 1000,
+      "Items": "{% $states.input.samplesList %}",
+      "ItemProcessor": {
+        "ProcessorConfig": {
+          "Mode": "DISTRIBUTED",
+          "ExecutionType": "STANDARD"
+        },
+        "StartAt": "Get vars inside map",
+        "States": {
+          "Get vars inside map": {
+            "Type": "Pass",
+            "Next": "Get read sets",
+            "Assign": {
+              "libraryIdListMapIter": "{% $states.input.Items %}",
+              "fastqListUriMapIter": "{% $states.input.BatchInput.fastqListUri %}",
+              "demuxStatsUriMapIter": "{% $states.input.BatchInput.demuxStatsUri %}",
+              "instrumentRunIdMapIter": "{% $states.input.BatchInput.instrumentRunId %}"
+            }
+          },
+          "Get read sets": {
+            "Type": "Parallel",
+            "Next": "For each library",
+            "Branches": [
+              {
+                "StartAt": "Get Fastq Objects",
+                "States": {
+                  "Get Fastq Objects": {
+                    "Type": "Task",
+                    "Resource": "arn:aws:states:::lambda:invoke",
+                    "Arguments": {
+                      "FunctionName": "${__get_fastq_objects_lambda_function_arn__}",
+                      "Payload": {
+                        "libraryIdList": "{% $libraryIdListMapIter %}",
+                        "instrumentRunId": "{% $instrumentRunIdMapIter %}"
+                      }
+                    },
+                    "Retry": [
+                      {
+                        "ErrorEquals": [
+                          "Lambda.ServiceException",
+                          "Lambda.AWSLambdaException",
+                          "Lambda.SdkClientException",
+                          "Lambda.TooManyRequestsException"
+                        ],
+                        "IntervalSeconds": 1,
+                        "MaxAttempts": 3,
+                        "BackoffRate": 2,
+                        "JitterStrategy": "FULL"
+                      }
+                    ],
+                    "End": true,
+                    "Output": {
+                      "fastqIdsByLibrary": "{% $states.result.Payload.fastqIdsByLibrary %}"
+                    }
+                  }
+                }
+              },
+              {
+                "StartAt": "Get File Names from Fastq List Csv",
+                "States": {
+                  "Get File Names from Fastq List Csv": {
+                    "Type": "Task",
+                    "Resource": "arn:aws:states:::lambda:invoke",
+                    "Output": {
+                      "fileNamesListBySample": "{% $states.result.Payload.fileNamesListBySample %}"
+                    },
+                    "Arguments": {
+                      "FunctionName": "${__get_file_names_from_fastq_list_csv_lambda_function_arn__}",
+                      "Payload": {
+                        "sampleIdList": "{% $libraryIdListMapIter %}",
+                        "fastqListUri": "{% $fastqListUriMapIter %}"
+                      }
+                    },
+                    "Retry": [
+                      {
+                        "ErrorEquals": [
+                          "Lambda.ServiceException",
+                          "Lambda.AWSLambdaException",
+                          "Lambda.SdkClientException",
+                          "Lambda.TooManyRequestsException"
+                        ],
+                        "IntervalSeconds": 1,
+                        "MaxAttempts": 3,
+                        "BackoffRate": 2,
+                        "JitterStrategy": "FULL"
+                      }
+                    ],
+                    "End": true
+                  }
+                }
+              },
+              {
+                "StartAt": "Get Demux Data Stats",
+                "States": {
+                  "Get Demux Data Stats": {
+                    "Type": "Task",
+                    "Resource": "arn:aws:states:::lambda:invoke",
+                    "Arguments": {
+                      "FunctionName": "${__get_sample_demultiplex_stats_lambda_function_arn__}",
+                      "Payload": {
+                        "sampleIdList": "{% $libraryIdListMapIter %}",
+                        "demuxStatsUri": "{% $demuxStatsUriMapIter %}"
+                      }
+                    },
+                    "Retry": [
+                      {
+                        "ErrorEquals": [
+                          "Lambda.ServiceException",
+                          "Lambda.AWSLambdaException",
+                          "Lambda.SdkClientException",
+                          "Lambda.TooManyRequestsException"
+                        ],
+                        "IntervalSeconds": 1,
+                        "MaxAttempts": 3,
+                        "BackoffRate": 2,
+                        "JitterStrategy": "FULL"
+                      }
+                    ],
+                    "End": true,
+                    "Output": {
+                      "demuxDataBySample": "{% $states.result.Payload.demuxDataBySample %}"
+                    }
+                  }
+                }
+              }
+            ],
+            "Output": {
+              "dataByLibrary": "{% /* https://try.jsonata.org/83qHy8eHK */\n\n(\n    $libraryIds := [$map(\n        $states.result[0].fastqIdsByLibrary,\n        function($fastqIdsByLibraryIter) {\n            $fastqIdsByLibraryIter.libraryId\n        }\n    )];\n\n    $getfastqIdListForLibrary := function($libraryId){\n        [\n            $map(\n                [\n                    $filter(\n                        $states.result[0].fastqIdsByLibrary,\n                        function($fastqIdsByLibraryIter){\n                            $fastqIdsByLibraryIter.libraryId = $libraryId\n                        }\n                    )\n                ],\n                function($fastqIdsByLibraryIter){\n                    $fastqIdsByLibraryIter.fastqIdList\n                }\n            )\n        ]\n    };\n\n    $fileNamesListBySample := function($sampleId){\n        [\n            $map(\n                [\n                    $filter(\n                        $states.result[1].fileNamesListBySample,\n                        function($fileNamesListBySampleIter){\n                            $fileNamesListBySampleIter.sampleId = $sampleId\n                        }\n                    )\n                ],\n                function($fileNamesListBySampleIter){\n                    $fileNamesListBySampleIter.fileNamesList\n                }\n            )\n        ]\n    };\n\n    $demuxDataBySample := function($sampleId){\n        [\n            $map(\n                [\n                    $filter(\n                        $states.result[2].demuxDataBySample,\n                        function($demuxDataBySampleIter){\n                            $demuxDataBySampleIter.sampleId = $sampleId\n                        }\n                    )\n                ],\n                function($demuxDataBySampleIter){\n                    $demuxDataBySampleIter.demuxData\n                }\n            )\n        ]\n    };\n\n\n\n    [$map(\n        $libraryIds,\n        function($libraryId) {\n            {\n                \"libraryId\": $libraryId,\n                \"fastqIdList\": $getfastqIdListForLibrary($libraryId),\n                \"fileNamesList\": $fileNamesListBySample($libraryId),\n                \"demuxData\": $demuxDataBySample($libraryId)\n            }\n        }\n    )]\n) %}"
+            }
+          },
+          "For each library": {
+            "Type": "Map",
+            "ItemProcessor": {
+              "ProcessorConfig": {
+                "Mode": "INLINE"
+              },
+              "StartAt": "Add Read Sets to Fastq Objects",
+              "States": {
+                "Add Read Sets to Fastq Objects": {
+                  "Type": "Task",
+                  "Resource": "arn:aws:states:::lambda:invoke",
+                  "Output": {},
+                  "Arguments": {
+                    "FunctionName": "${__add_read_sets_to_fastq_objects_lambda_function_arn__}",
+                    "Payload": {
+                      "fastqIdList": "{% $states.input.fastqIdList %}",
+                      "fileNamesList": "{% $states.input.fileNamesList %}",
+                      "demuxData": "{% $states.input.demuxData %}"
+                    }
+                  },
+                  "Retry": [
+                    {
+                      "ErrorEquals": [
+                        "Lambda.ServiceException",
+                        "Lambda.AWSLambdaException",
+                        "Lambda.SdkClientException",
+                        "Lambda.TooManyRequestsException"
+                      ],
+                      "IntervalSeconds": 1,
+                      "MaxAttempts": 3,
+                      "BackoffRate": 2,
+                      "JitterStrategy": "FULL"
+                    }
+                  ],
+                  "End": true
+                }
+              }
+            },
+            "End": true,
+            "Items": "{% $states.input.dataByLibrary %}",
+            "ItemSelector": {
+              "libraryId": "{% $states.context.Map.Item.Value.libraryId %}",
+              "fastqIdList": "{% $states.context.Map.Item.Value.fastqIdList %}",
+              "fileNamesList": "{% $states.context.Map.Item.Value.fileNamesList %}",
+              "demuxData": "{% $states.context.Map.Item.Value.demuxData %}"
+            },
+            "Output": {}
+          }
+        }
+      },
+      "Output": {},
+      "ItemBatcher": {
+        "BatchInput": {
+          "fastqListUri": "{% $fastqListUri %}",
+          "demuxStatsUri": "{% $demuxStatsUri %}",
+          "instrumentRunId": "{% $instrumentRunId %}"
+        },
+        "MaxItemsPerBatch": 10
+      },
+      "End": true
+    }
+  },
+  "QueryLanguage": "JSONata"
+}

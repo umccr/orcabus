@@ -1,0 +1,1 @@
+SEQUENCE_SUBDOMAIN_NAME = 'sequence'

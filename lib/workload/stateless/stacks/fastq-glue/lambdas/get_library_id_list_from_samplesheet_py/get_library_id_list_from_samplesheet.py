@@ -23,8 +23,8 @@ import boto3
 from pathlib import Path
 from urllib.parse import urlparse
 from typing import Tuple, Dict, List
-from v2_samplesheet_maker.functions.v2_samplesheet_reader import v2_samplesheet_reader
 
+from sequence_tools import get_sequence_object_from_instrument_run_id, get_library_ids_in_sequence
 
 # Type hints
 if typing.TYPE_CHECKING:
@@ -52,20 +52,7 @@ def get_s3_object(bucket: str, key: str, output_path: Path):
     )
 
 
-def read_v2_samplesheet(samplesheet_uri: str) -> Dict:
-    bucket, key = get_bucket_key_from_s3_uri(samplesheet_uri)
-
-    # Create a temporary file to store the samplesheet
-    temp_file = Path(NamedTemporaryFile(delete=False, suffix=".csv").name)
-
-    # Download the samplesheet from S3
-    get_s3_object(bucket, key, temp_file)
-
-    # Read the samplesheet
-    return v2_samplesheet_reader(temp_file)
-
-
-def handler(event, context) -> Dict[str, List[Dict[str, str]]]:
+def handler(event, context) -> Dict[str, List[str]]:
     """
     Given a samplesheet uri and a sample id,
     Download the samplesheet, get the bclconvert data section
@@ -76,16 +63,40 @@ def handler(event, context) -> Dict[str, List[Dict[str, str]]]:
     """
 
     # Get the sample id and samplesheet uri from the event
-    samplesheet_uri = event['sampleSheetUri']
+    instrument_run_id = event['instrumentRunId']
 
-    # Read the samplesheet
-    samplesheet = read_v2_samplesheet(samplesheet_uri)
+    # Get the sequence object orcabus id from the instrument run id
+    sequence_orcabus_id = get_sequence_object_from_instrument_run_id(instrument_run_id)['orcabusId']
 
-    # Return the bclconvert data
+    # Get the libraries from the sequence object
     return {
-        'samplesList': list(set(list(map(
-            lambda bclconvert_data_row_: bclconvert_data_row_['sample_id'],
-            samplesheet['bclconvert_data']
-        ))))
+        "libraryIdList": get_library_ids_in_sequence(sequence_orcabus_id)
     }
 
+
+# if __name__ == "__main__":
+#     import json
+#     from os import environ
+#     environ['AWS_PROFILE'] = 'umccr-production'
+#     environ['AWS_REGION'] = 'ap-southeast-2'
+#     environ['HOSTNAME_SSM_PARAMETER'] = '/hosted_zone/umccr/name'
+#     environ['ORCABUS_TOKEN_SECRET_ID'] = 'orcabus/token-service-jwt'
+#     print(json.dumps(
+#         handler(
+#             {
+#                 "instrumentRunId": "250307_A00130_0360_BHCLW2DSXF"
+#             },
+#             None
+#         ),
+#         indent=4
+#     ))
+#
+#     # {
+#     #     "libraryIdList": [
+#     #         "L2500185",
+#     #         "L2500181",
+#     #         ...
+#     #         "L2500178",
+#     #         "L2500179"
+#     #     ]
+#     # }

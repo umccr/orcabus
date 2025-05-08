@@ -77,25 +77,25 @@ class ReadSet(TypedDict):
 
 
 class Library(TypedDict):
-    orcabusId: str
-    libraryId: str
+    orcabusId: NotRequired[str]
+    libraryId: NotRequired[str]
 
 
-class FastqListRowCreate(TypedDict):
-    fastqSetId: Optional[str]
+class FastqListRowCreateParams(TypedDict):
+    fastqSetId: NotRequired[str]
     index: str
     lane: int
     instrumentRunId: str
     library: Library
-    platform: Optional[str]
-    center: Optional[str]
-    date: Optional[datetime]
-    readSet: Optional[ReadSet]
-    qc: Optional[Dict]
-    readCount: Optional[int]
-    baseCountEst: Optional[int]
-    isValid: Optional[bool]
-    ntsm: Optional[FileStorageObject]
+    platform: NotRequired[str]
+    center: NotRequired[str]
+    date: NotRequired[str]
+    readSet: NotRequired[ReadSet]
+    qc: NotRequired[Dict]
+    readCount: NotRequired[int]
+    baseCountEst: NotRequired[int]
+    isValid: NotRequired[bool]
+    ntsm: NotRequired[FileStorageObject]
 
 
 class FastqListRow(TypedDict):
@@ -116,7 +116,7 @@ class FastqListRow(TypedDict):
     ntsm: Optional[FileStorageObject]
 
 
-class FastqSetCreate(TypedDict):
+class FastqSetCreateParams(TypedDict):
     library: Library
     fastqSet: List[FastqListRow]
     allowAdditionalFastq: bool

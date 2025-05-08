@@ -12,6 +12,8 @@ import {
   fastqGlueEventsSource,
   fastqGlueEventsDetailType,
   bsshFastqCopyManagerWorkflowName,
+  sequenceRunManagerEventDetailType,
+  sequenceRunManagerEventSource,
 } from '../constants';
 import { FastqGlueStackConfig } from '../../lib/workload/stateless/stacks/fastq-glue/deploy/interfaces';
 
@@ -31,6 +33,8 @@ export const getFastqGlueStackProps = (stage: AppStage): FastqGlueStackConfig =>
     workflowRunStateChangeEventDetailType: bsshFastqCopyManagerEventDetailType,
     workflowManagerEventSource: 'orcabus.workflowmanager',
     bsshFastqCopyManagerWorkflowName: bsshFastqCopyManagerWorkflowName,
+    sequenceRunStateChangeEventDetailType: sequenceRunManagerEventDetailType,
+    sequenceRunManageEventSource: sequenceRunManagerEventSource,
 
     // Output events
     eventDetailType: fastqGlueEventsDetailType,

@@ -5,11 +5,11 @@ Fastq tools to be used by various lambdas as needed
 """
 from .utils.models import(
     FastqListRow,
-    FastqListRowCreate,
+    FastqListRowCreateParams,
     FastqStorageObject,
     FileStorageObject,
     FastqSet,
-    FastqSetCreate,
+    FastqSetCreateParams,
     Job,
     JobStatus,
     JobType
@@ -68,11 +68,11 @@ from .utils.job_helpers import (
 __all__ = [
     # Models
     "FastqListRow",
-    "FastqListRowCreate",
+    "FastqListRowCreateParams",
     "FastqStorageObject",
     "FileStorageObject",
     "FastqSet",
-    "FastqSetCreate",
+    "FastqSetCreateParams",
     "Job",
     "JobStatus",
     "JobType",

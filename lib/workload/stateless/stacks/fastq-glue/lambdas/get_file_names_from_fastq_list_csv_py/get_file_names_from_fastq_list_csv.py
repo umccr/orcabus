@@ -96,22 +96,22 @@ def convert_df_iterable_to_uri(
 
 
 def get_rows_fastq_list_df(
-        sample_id: str,
+        sample_id_list: List[str],
         fastq_list_df: pd.DataFrame,
         fastq_list_uri: str
 ) -> List[Dict[str, Union[str, int]]]:
     """
     Get the file names from the fastq list dataframe
-    :param sample_id:
+    :param sample_id_list:
     :param fastq_list_df:
     :return:
     """
     samples_uri = fastq_list_uri.replace("Reports/fastq_list.csv", "Samples/")
     bucket, key = get_bucket_key_from_s3_uri(samples_uri)
     return fastq_list_df.query(
-        "RGSM == @sample_id",
+        "RGSM in @sample_id_list",
     ).assign(
-        libraryId=lambda row_iter_: row_iter_["RGSM"],
+        sampleId=lambda row_iter_: row_iter_["RGSM"],
         lane=lambda row_iter_: pd.to_numeric(row_iter_["Lane"]),
         read1FileUri=lambda row_iter_: convert_df_iterable_to_uri(bucket, key, row_iter_, "Read1File"),
         read2FileUri=lambda row_iter_: (
@@ -120,7 +120,7 @@ def get_rows_fastq_list_df(
             else None
         ),
     )[[
-        "libraryId",
+        "sampleId",
         "lane",
         "read1FileUri",
         "read2FileUri"
@@ -144,50 +144,66 @@ def handler(event, context) -> Dict[str, List[Dict[str, str]]]:
     """
 
     # Get the sample id and samplesheet uri from the event
-    sample_id = event['sampleId']
+    sample_id_list = event['sampleIdList']
     fastq_list_uri = event['fastqListUri']
 
     # Read the samplesheet
     fastq_list_df = read_fastq_list_csv(fastq_list_uri)
 
+    file_names_list = get_rows_fastq_list_df(
+        sample_id_list=sample_id_list,
+        fastq_list_df=fastq_list_df,
+        fastq_list_uri=fastq_list_uri
+    )
+
     # Return fastq list rows for this sample
     return {
-        'sampleFileNames': get_rows_fastq_list_df(
-            sample_id=sample_id,
-            fastq_list_df=fastq_list_df,
-            fastq_list_uri=fastq_list_uri
-        )
+        'fileNamesListBySample': list(map(
+            lambda sample_id_iter_: {
+                "sampleId": sample_id_iter_,
+                "fileNamesList": list(filter(
+                    lambda file_iter_: file_iter_["sampleId"] == sample_id_iter_,
+                    file_names_list
+                ))
+            },
+            sample_id_list
+        ))
     }
 
-# if __name__ == "__main__":
-#     import json
-#     from os import environ
-#     environ['AWS_PROFILE'] = 'umccr-development'
-#     environ['AWS_REGION'] = 'ap-southeast-2'
-#     print(json.dumps(
-#         handler(
-#             {
-#                 "sampleId": "L2401544",
-#                 "fastqListUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/241024_A00130_0336_BHW7MVDSXC/20250324abcd1234/Reports/fastq_list.csv"
-#             },
-#             None
-#         ),
-#         indent=4
-#     ))
-#
-#     # {
-#     #     "sampleFileNames": [
-#     #         {
-#     #             "libraryId": "L2401544",
-#     #             "lane": 2,
-#     #             "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/241024_A00130_0336_BHW7MVDSXC/20250324abcd1234/Samples/Lane_2/L2401544/L2401544_S12_L002_R1_001.fastq.ora",
-#     #             "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/241024_A00130_0336_BHW7MVDSXC/20250324abcd1234/Samples/Lane_2/L2401544/L2401544_S12_L002_R2_001.fastq.ora"
-#     #         },
-#     #         {
-#     #             "libraryId": "L2401544",
-#     #             "lane": 3,
-#     #             "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/241024_A00130_0336_BHW7MVDSXC/20250324abcd1234/Samples/Lane_3/L2401544/L2401544_S12_L003_R1_001.fastq.ora",
-#     #             "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/241024_A00130_0336_BHW7MVDSXC/20250324abcd1234/Samples/Lane_3/L2401544/L2401544_S12_L003_R2_001.fastq.ora"
-#     #         }
-#     #     ]
-#     # }
+if __name__ == "__main__":
+    import json
+    from os import environ
+    environ['AWS_PROFILE'] = 'umccr-development'
+    environ['AWS_REGION'] = 'ap-southeast-2'
+    print(json.dumps(
+        handler(
+            {
+                "sampleIdList": ["L2401544"],
+                "fastqListUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/241024_A00130_0336_BHW7MVDSXC/20250324abcd1234/Reports/fastq_list.csv"
+            },
+            None
+        ),
+        indent=4
+    ))
+
+    # {
+    #     "fileNamesListBySample": [
+    #         {
+    #             "sampleId": "L2401544",
+    #             "fileNamesList": [
+    #                 {
+    #                     "sampleId": "L2401544",
+    #                     "lane": 2,
+    #                     "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/241024_A00130_0336_BHW7MVDSXC/20250324abcd1234/Samples/Lane_2/L2401544/L2401544_S12_L002_R1_001.fastq.ora",
+    #                     "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/241024_A00130_0336_BHW7MVDSXC/20250324abcd1234/Samples/Lane_2/L2401544/L2401544_S12_L002_R2_001.fastq.ora"
+    #                 },
+    #                 {
+    #                     "sampleId": "L2401544",
+    #                     "lane": 3,
+    #                     "read1FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/241024_A00130_0336_BHW7MVDSXC/20250324abcd1234/Samples/Lane_3/L2401544/L2401544_S12_L003_R1_001.fastq.ora",
+    #                     "read2FileUri": "s3://pipeline-dev-cache-503977275616-ap-southeast-2/byob-icav2/development/primary/241024_A00130_0336_BHW7MVDSXC/20250324abcd1234/Samples/Lane_3/L2401544/L2401544_S12_L003_R2_001.fastq.ora"
+    #                 }
+    #             ]
+    #         }
+    #     ]
+    # }

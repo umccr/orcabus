@@ -57,7 +57,7 @@ def get_fastqs(*args, **kwargs: Unpack[FastqListRowQueryParameters]) -> List[Fas
     """
     # Raise error if any of the kwargs are not in the FastqListRowQueryParameters
     for key in kwargs.keys():
-        if key not in FastqListRowQueryParameters.__annotations__:
+        if key.rstrip("[]") not in FastqListRowQueryParameters.__annotations__:
             raise ValueError(f"Invalid parameter: {key}")
 
     return get_request_response_results(FASTQ_LIST_ROW_ENDPOINT, params=kwargs)
