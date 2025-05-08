@@ -308,6 +308,19 @@ export class FastqGlueStack extends Stack {
       })
     );
 
+    // Redrive execution requires permissions to list state machine executions
+    NagSuppressions.addResourceSuppressions(
+      [fastqAddReadSetStateMachine, distributedMapPolicy],
+      [
+        {
+          id: 'AwsSolutions-IAM5',
+          reason:
+            'grantRead uses asterisk at the end of executions, as we need permissions for all execution invocations',
+        },
+      ],
+      true
+    );
+
     return fastqAddReadSetStateMachine;
   }
 
