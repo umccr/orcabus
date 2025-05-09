@@ -26,7 +26,7 @@ to_update as (
             -- This finds the first value in the set which represents the most up-to-date state.
             -- If ordered by the sequencer, the first row is the one that needs to have `is_current_state`
             -- set to 'true' only for `Created` events, as `Deleted` events are always non-current state.
-            case when row_number() over (order by s3_object.sequencer desc) = 1 then
+            case when row_number() over (order by s3_object.sequencer desc nulls last) = 1 then
                 event_type = 'Created'
             -- Set `is_current_state` to 'false' for all other rows, as this is now historical data.
             else

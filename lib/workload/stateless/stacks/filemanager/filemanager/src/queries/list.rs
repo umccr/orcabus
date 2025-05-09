@@ -4,12 +4,12 @@
 use sea_orm::prelude::Expr;
 use sea_orm::sea_query::extension::postgres::PgExpr;
 use sea_orm::sea_query::{
-    Alias, BinOper, ColumnRef, ConditionExpression, IntoColumnRef, IntoCondition,
+    Alias, BinOper, ColumnRef, ConditionExpression, IntoColumnRef, IntoCondition, NullOrdering,
     PostgresQueryBuilder, SimpleExpr,
 };
 use sea_orm::{
     ColumnTrait, Condition, ConnectionTrait, EntityTrait, FromQueryResult, IntoSimpleExpr,
-    JsonValue, PaginatorTrait, QueryFilter, QueryOrder, QuerySelect, QueryTrait, Select,
+    JsonValue, Order, PaginatorTrait, QueryFilter, QueryOrder, QuerySelect, QueryTrait, Select,
 };
 use tracing::trace;
 use url::Url;
@@ -47,7 +47,11 @@ where
 
     /// Define a select query for finding values from s3 objects.
     pub fn for_s3() -> Select<s3_object::Entity> {
-        s3_object::Entity::find().order_by_asc(s3_object::Column::Sequencer)
+        s3_object::Entity::find().order_by_with_nulls(
+            s3_object::Column::Sequencer,
+            Order::Asc,
+            NullOrdering::First,
+        )
     }
 
     /// Filter records by all fields in the filter variable.
