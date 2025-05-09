@@ -105,8 +105,9 @@ export class SequenceRunManagerStack extends Stack {
     this.createMigrationHandler();
     this.createApiHandlerAndIntegration(props);
     this.createProcSqsHandler();
+    this.createProcSampleSheetHandler();
+    this.createProcLibraryLinkingHandler();
     this.createSlackNotificationHandler(props.slackTopicName, props.orcabusUIBaseUrl);
-    this.createLibraryLinkingHandler();
   }
 
   private createPythonFunction(name: string, props: object): PythonFunction {
@@ -193,10 +194,10 @@ export class SequenceRunManagerStack extends Stack {
     });
 
     this.mainBus.grantPutEventsTo(procSqsFn);
-    this.setupEventRule(procSqsFn); // TODO comment this out for now
+    this.setupProcSqsEventRule(procSqsFn); // TODO comment this out for now
   }
 
-  private setupEventRule(fn: IFunction) {
+  private setupProcSqsEventRule(fn: IFunction) {
     /**
      * For sequence run manager, we are using orcabus events ( source from BSSH ENS event pipe) to trigger the lambda function.
      * event rule to filter the events that we are interested in.
@@ -234,6 +235,67 @@ export class SequenceRunManagerStack extends Stack {
       },
     });
 
+    eventRule.addTarget(new LambdaFunction(fn));
+  }
+
+  private createProcSampleSheetHandler() {
+    const procSampleSheetFn = this.createPythonFunction('ProcSampleSheetHandler', {
+      index: 'sequence_run_manager_proc/lambdas/samplesheet_event.py',
+      handler: 'event_handler',
+      timeout: Duration.minutes(2),
+    });
+
+    this.mainBus.grantPutEventsTo(procSampleSheetFn);
+    this.setupProcSampleSheetEventRule(procSampleSheetFn);
+  }
+
+  private setupProcSampleSheetEventRule(fn: IFunction) {
+    const eventRule = new Rule(this, this.stackName + 'ProcSampleSheetEventRule', {
+      ruleName: this.stackName + 'ProcSampleSheetEventRule',
+      description: 'Rule to send SampleSheet events to the ProcSampleSheetHandler Lambda',
+      eventBus: this.mainBus,
+    });
+    eventRule.addEventPattern({
+      detailType: ['SequenceRunSampleSheetChange'],
+      detail: {
+        instrumentRunId: [{ exists: true }],
+        sequenceRunId: [{ exists: true }],
+        sequenceOrcabusId: [{ exists: true }],
+        timeStamp: [{ exists: true }],
+        sampleSheetName: [{ exists: true }],
+        samplesheetbase64gz: [{ exists: true }],
+      },
+    });
+    eventRule.addTarget(new LambdaFunction(fn));
+  }
+
+  private createProcLibraryLinkingHandler() {
+    const procLibraryLinkingFn = this.createPythonFunction('ProcLibraryLinkingHandler', {
+      index: 'sequence_run_manager_proc/lambdas/librarylinking_event.py',
+      handler: 'event_handler',
+      timeout: Duration.minutes(2),
+    });
+
+    this.mainBus.grantPutEventsTo(procLibraryLinkingFn);
+    this.setupProcLibraryLinkingEventRule(procLibraryLinkingFn);
+  }
+
+  private setupProcLibraryLinkingEventRule(fn: IFunction) {
+    const eventRule = new Rule(this, this.stackName + 'ProcLibraryLinkingEventRule', {
+      ruleName: this.stackName + 'ProcLibraryLinkingEventRule',
+      description: 'Rule to send LibraryLinking events to the ProcLibraryLinkingHandler Lambda',
+      eventBus: this.mainBus,
+    });
+    eventRule.addEventPattern({
+      detailType: ['SequenceRunLibraryLinkingChange'],
+      detail: {
+        instrumentRunId: [{ exists: true }],
+        sequenceRunId: [{ exists: true }],
+        sequenceOrcabusId: [{ exists: true }],
+        timeStamp: [{ exists: true }],
+        linkedLibraries: [{ exists: true }],
+      },
+    });
     eventRule.addTarget(new LambdaFunction(fn));
   }
 
@@ -315,53 +377,6 @@ export class SequenceRunManagerStack extends Stack {
             ].join('\n'),
           },
         }),
-      })
-    );
-  }
-
-  private createLibraryLinkingHandler() {
-    // create a s3 bucket to store the library linking data
-    const srmTempLinkingDataBucket = new Bucket(this, 'SrmTempLinkingDataBucket', {
-      bucketName: 'orcabus-temp-srm-linking-data-' + this.account + '-ap-southeast-2',
-      removalPolicy: RemovalPolicy.DESTROY,
-      enforceSSL: true,
-    });
-
-    // lambda function to check and create the library linking
-    const libraryLinkingFn = this.createPythonFunction('LibraryLinking', {
-      index: 'sequence_run_manager_proc/lambdas/check_and_create_library_linking.py',
-      handler: 'handler',
-      timeout: Duration.minutes(15),
-      environment: {
-        LINKING_DATA_BUCKET_NAME: srmTempLinkingDataBucket.bucketName,
-        ...this.lambdaEnv,
-      },
-    });
-
-    // lambda function to check and create the samplesheet
-    const samplesheetFn = this.createPythonFunction('Samplesheet', {
-      index: 'sequence_run_manager_proc/lambdas/check_and_create_samplesheet.py',
-      handler: 'handler',
-      timeout: Duration.minutes(15),
-      environment: {
-        LINKING_DATA_BUCKET_NAME: srmTempLinkingDataBucket.bucketName,
-        ...this.lambdaEnv,
-      },
-    });
-
-    // grant the lambda function permission to write to the library linking bucket
-    srmTempLinkingDataBucket.grantReadWrite(libraryLinkingFn);
-    srmTempLinkingDataBucket.grantReadWrite(samplesheetFn);
-    libraryLinkingFn.addToRolePolicy(
-      new PolicyStatement({
-        actions: ['s3:GetObject', 's3:PutObject', 's3:DeleteObject'],
-        resources: [srmTempLinkingDataBucket.arnForObjects('*')],
-      })
-    );
-    samplesheetFn.addToRolePolicy(
-      new PolicyStatement({
-        actions: ['s3:GetObject', 's3:PutObject', 's3:DeleteObject'],
-        resources: [srmTempLinkingDataBucket.arnForObjects('*')],
       })
     );
   }
