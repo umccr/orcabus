@@ -396,9 +396,11 @@ export class FastqGlueStack extends Stack {
       this.lambdaObjects[lambdaName] = this.createLambdaFunction({
         lambdaName: lambdaName,
         ...{
-          layerRequirements: lambdaToRequirementsMapping[lambdaName].needsFastqToolsLayer
-            ? props.layerRequirements
-            : undefined,
+          layerRequirements:
+            lambdaToRequirementsMapping[lambdaName].needsFastqToolsLayer ||
+            lambdaToRequirementsMapping[lambdaName].needsSequenceToolsLayer
+              ? props.layerRequirements
+              : undefined,
           fastqToolsLayer: lambdaToRequirementsMapping[lambdaName].needsFastqToolsLayer
             ? props.fastqToolsLayer
             : undefined,

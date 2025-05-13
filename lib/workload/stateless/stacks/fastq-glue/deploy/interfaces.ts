@@ -62,7 +62,7 @@ export const lambdaToRequirementsMapping: LambdaToRequirementsMappingType = {
   getSampleDemultiplexStats: {
     needsCacheBucketReadPermissions: true,
     needsFastqToolsLayer: false,
-    needsSequenceToolsLayer: false,
+    needsSequenceToolsLayer: true,
   },
 };
 
