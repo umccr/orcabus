@@ -16,9 +16,9 @@ Demux stats file has the following columns:
 Lane,SampleID,Index,# Reads,# Perfect Index Reads,# One Mismatch Index Reads,# Two Mismatch Index Reads,% Reads,% Perfect Index Reads,% One Mismatch Index Reads,% Two Mismatch Index Reads
 
 """
-import re
 
 # Imports
+import re
 import pandas as pd
 from tempfile import NamedTemporaryFile
 import typing
@@ -104,7 +104,6 @@ def get_cycle_count_from_bclconvert_data_row(bclconvert_data_row: Dict[str, str]
     return None
 
 
-
 def get_est_count_from_samplesheet(
         series_iter_,
         samplesheet_dict: Dict[str, Dict[str, Any]],
@@ -118,14 +117,15 @@ def get_est_count_from_samplesheet(
     """
     return list(map(
         lambda series_iter_map_: (
-            (
-                get_cycle_count_from_bclconvert_data_row(next(filter(
-                    lambda bclconvert_data_iter_: bclconvert_data_iter_['sampleId'] == series_iter_map_[1]['SampleID'],
-                    samplesheet_dict['bclconvertData']
-                )))
-                if get_cycle_count_from_bclconvert_data_row(samplesheet_dict['bclconvertData']) is not None
-                else global_cycle_count
-            ) * series_iter_map_[1]['# Reads']
+                (
+                    get_cycle_count_from_bclconvert_data_row(next(filter(
+                        lambda bclconvert_data_iter_: bclconvert_data_iter_['sampleId'] == series_iter_map_[1][
+                            'SampleID'],
+                        samplesheet_dict['bclconvertData']
+                    )))
+                    if get_cycle_count_from_bclconvert_data_row(samplesheet_dict['bclconvertData']) is not None
+                    else global_cycle_count
+                ) * series_iter_map_[1]['# Reads']
         ),
         series_iter_.iterrows()
     ))
@@ -142,22 +142,22 @@ def get_rows_demux_stats_df(
     :param demux_stats_df:
     :return:
     """
-    return (demux_stats_df.query(
-        "SampleID in @sample_id_list",
-    ).assign(
-        sampleId=lambda row_iter_: row_iter_["SampleID"],
-        lane=lambda row_iter_: pd.to_numeric(row_iter_["Lane"]),
-        readCount=lambda row_iter_: row_iter_["# Reads"],
-        baseCountEst=lambda row_iter_: get_est_count_from_samplesheet(
-            row_iter_,
-            samplesheet_dict,
-            get_global_cycle_count(samplesheet_dict)
-        )
-    )[[
-        "sampleId", "lane", "readCount", "baseCountEst"
-    ]].to_dict(
-        orient='records'
-    ))
+    return (
+        demux_stats_df.copy().query(
+            "SampleID in @sample_id_list",
+        ).assign(
+            sampleId=lambda row_iter_: row_iter_["SampleID"],
+            lane=lambda row_iter_: pd.to_numeric(row_iter_["Lane"]),
+            readCount=lambda row_iter_: row_iter_["# Reads"],
+            baseCountEst=lambda row_iter_: get_est_count_from_samplesheet(
+                row_iter_,
+                samplesheet_dict,
+                get_global_cycle_count(samplesheet_dict)
+            )
+        )[[
+            "sampleId", "lane", "readCount", "baseCountEst"
+        ]]
+    )
 
 
 def handler(event, context) -> Dict[str, List[Dict[str, str]]]:
@@ -186,19 +186,33 @@ def handler(event, context) -> Dict[str, List[Dict[str, str]]]:
         sequence_id
     )['sampleSheetContent']
 
+    demux_stats_df = get_rows_demux_stats_df(
+        sample_id_list,
+        demux_stats_df,
+        samplesheet_dict
+    )
+
     # Return fastq list rows for this sample
     return {
-        'sampleDemuxStats': get_rows_demux_stats_df(
-            sample_id_list,
-            demux_stats_df,
-            samplesheet_dict
-        )
+        'demuxDataBySample': list(map(
+            lambda sample_id_iter_: (
+                {
+                    "sampleId": sample_id_iter_,
+                    "demuxData": (
+                        demux_stats_df.query('sampleId == @sample_id_iter_').
+                        to_dict(orient='records')
+                    )
+                }
+            ),
+            sample_id_list
+        ))
     }
 
 
 # if __name__ == "__main__":
 #     import json
 #     from os import environ
+#
 #     environ['AWS_PROFILE'] = 'umccr-development'
 #     environ['AWS_REGION'] = 'ap-southeast-2'
 #     environ['HOSTNAME_SSM_PARAMETER'] = '/hosted_zone/umccr/name'
@@ -216,18 +230,23 @@ def handler(event, context) -> Dict[str, List[Dict[str, str]]]:
 #     ))
 #
 #     # {
-#     #     "sampleDemuxStats": [
+#     #     "demuxDataBySample": [
 #     #         {
 #     #             "sampleId": "L2401544",
-#     #             "lane": 2,
-#     #             "readCount": 56913395,
-#     #             "baseCountEst": 17187845290
-#     #         },
-#     #         {
-#     #             "sampleId": "L2401544",
-#     #             "lane": 3,
-#     #             "readCount": 62441372,
-#     #             "baseCountEst": 18857294344
+#     #             "demuxData": [
+#     #                 {
+#     #                     "sampleId": "L2401544",
+#     #                     "lane": 2,
+#     #                     "readCount": 56913395,
+#     #                     "baseCountEst": 17187845290
+#     #                 },
+#     #                 {
+#     #                     "sampleId": "L2401544",
+#     #                     "lane": 3,
+#     #                     "readCount": 62441372,
+#     #                     "baseCountEst": 18857294344
+#     #                 }
+#     #             ]
 #     #         }
 #     #     ]
 #     # }

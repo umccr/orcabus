@@ -15,7 +15,7 @@
       "Next": "Get Libraries in Instrument Run ID",
       "Assign": {
         "fastqListUri": "{% $outputUri & 'Reports/fastq_list.csv' %}",
-        "demuxStatsUri": "{% $outputUri & 'Reports/DemultiplexStats.csv' %}"
+        "demuxStatsUri": "{% $outputUri & 'Reports/Demultiplex_Stats.csv' %}"
       }
     },
     "Get Libraries in Instrument Run ID": {
@@ -50,7 +50,15 @@
       "Type": "Map",
       "Label": "Foreachlibrarybatched",
       "MaxConcurrency": 1000,
-      "Items": "{% $states.input.samplesList %}",
+      "Items": "{% $states.input.libraryIdList %}",
+      "ItemBatcher": {
+        "BatchInput": {
+          "fastqListUri": "{% $fastqListUri %}",
+          "demuxStatsUri": "{% $demuxStatsUri %}",
+          "instrumentRunId": "{% $instrumentRunId %}"
+        },
+        "MaxItemsPerBatch": 10
+      },
       "ItemProcessor": {
         "ProcessorConfig": {
           "Mode": "DISTRIBUTED",
@@ -150,7 +158,8 @@
                       "FunctionName": "${__get_sample_demultiplex_stats_lambda_function_arn__}",
                       "Payload": {
                         "sampleIdList": "{% $libraryIdListMapIter %}",
-                        "demuxStatsUri": "{% $demuxStatsUriMapIter %}"
+                        "demuxStatsUri": "{% $demuxStatsUriMapIter %}",
+                        "instrumentRunId": "{% $instrumentRunIdMapIter %}"
                       }
                     },
                     "Retry": [
@@ -230,14 +239,6 @@
         }
       },
       "Output": {},
-      "ItemBatcher": {
-        "BatchInput": {
-          "fastqListUri": "{% $fastqListUri %}",
-          "demuxStatsUri": "{% $demuxStatsUri %}",
-          "instrumentRunId": "{% $instrumentRunId %}"
-        },
-        "MaxItemsPerBatch": 10
-      },
       "End": true
     }
   },
