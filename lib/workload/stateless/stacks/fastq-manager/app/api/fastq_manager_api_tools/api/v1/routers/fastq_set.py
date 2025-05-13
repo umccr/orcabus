@@ -772,7 +772,7 @@ async def set_allow_additional_fastqs_to_false(fastq_set_id: str = Depends(sanit
     fastq_set_obj.allow_additional_fastq = False
     fastq_set_obj.save()
 
-    fastq_set_dict = fastq_set_obj.to_dict(include_s3_details=True)
+    fastq_set_dict = fastq_set_obj.to_dict()
     put_fastq_set_update_event(
         fastq_set_response_object=fastq_set_dict,
         event_status=FastqSetStateChangeStatusEventsEnum.FASTQ_SET_ADDITIONAL_FASTQS_DISALLOWED,
