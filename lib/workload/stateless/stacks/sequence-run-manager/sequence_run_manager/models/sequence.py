@@ -89,18 +89,20 @@ class Sequence(OrcaBusBaseModel):
 
     # mandatory non-nullable base fields
     sequence_run_id = models.CharField(max_length=255, null=False, blank=False)  # unique key, legacy `run_id`
-    status = models.CharField(choices=SequenceStatus.choices, max_length=255, null=False, blank=False)
-    start_time = models.DateTimeField()
     sample_sheet_name = models.CharField(max_length=255, null=False, blank=False)
+    
+    # nullable base fields only for fake sequence runs (refer: https://github.com/umccr/orcabus/issues/947)
+    status = models.CharField(choices=SequenceStatus.choices, max_length=255, null=True, blank=True)
+    start_time = models.DateTimeField(null=True, blank=True)
 
-    # can be nullable base fields
+    # nullable base fields for sequence runs info from bssh events
     v1pre3_id = models.CharField(max_length=255, null=True, blank=True)
     ica_project_id = models.CharField(max_length=255, null=True, blank=True)
     api_url = models.TextField(null=True, blank=True)
     end_time = models.DateTimeField(null=True, blank=True)
-    run_volume_name = models.TextField(null=False, blank=False)  # legacy `gds_volume_name`
+    run_volume_name = models.TextField(null=True, blank=True)  # legacy `gds_volume_name`
     run_folder_path = models.TextField(null=True, blank=True)  # legacy `gds_folder_path`, nullable as ICAv2 event upgrade
-    run_data_uri = models.TextField(null=False, blank=False)  # must be absolute path, including URI scheme/protocol
+    run_data_uri = models.TextField(null=True, blank=True)  # must be absolute path, including URI scheme/protocol
 
     # optional fields -- business look up keys
     instrument_run_id = models.CharField(max_length=255, null=True, blank=True)
@@ -111,8 +113,6 @@ class Sequence(OrcaBusBaseModel):
     
     # run_config = models.JSONField(null=True, blank=True)  # TODO could be it's own model
     # sample_sheet_config = models.JSONField(null=True, blank=True)  # TODO could be it's own model
-
-    experiment_name = models.CharField(max_length=255, null=True, blank=True)
     
     objects = SequenceManager()
 
