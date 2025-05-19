@@ -8,7 +8,7 @@ import { HtsgetLambda } from 'htsget-lambda';
 /**
  * Configurable props for the htsget stack.
  */
-export type HtsgetStackConfigurableProps = {
+export type HtsgetStackProps = {
   /**
    * Props to lookup vpc.
    */
@@ -21,16 +21,10 @@ export type HtsgetStackConfigurableProps = {
    * The buckets to configure for htsget access.
    */
   buckets: string[];
-};
-
-/**
- * Props for the data migrate stack.
- */
-export type HtsgetStackProps = HtsgetStackConfigurableProps & {
   /**
-   * The role to use.
+   * The role name to use.
    */
-  role: Role;
+  roleName: string;
 };
 
 /**
@@ -45,6 +39,7 @@ export class HtsgetStack extends Stack {
 
     this.vpc = Vpc.fromLookup(this, 'MainVpc', props.vpcProps);
     this.apiGateway = new ApiGatewayConstruct(this, 'ApiGateway', props.apiGatewayCognitoProps);
+    const role = Role.fromRoleName(this, 'Role', props.roleName);
 
     new HtsgetLambda(this, 'Htsget', {
       htsgetConfig: {
@@ -60,7 +55,7 @@ export class HtsgetStack extends Stack {
       },
       cargoLambdaFlags: ['--features', 'aws'],
       vpc: this.vpc,
-      role: props.role,
+      role,
       httpApi: this.apiGateway.httpApi,
       gitReference: 'htsget-lambda-v0.6.0',
       gitForceClone: false,

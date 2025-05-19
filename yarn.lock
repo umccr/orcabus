@@ -2756,6 +2756,18 @@ __metadata:
   languageName: node
   linkType: hard
 
+"cargo-lambda-cdk@npm:^0.0.33":
+  version: 0.0.33
+  resolution: "cargo-lambda-cdk@npm:0.0.33"
+  dependencies:
+    js-toml: "npm:^0.1.1"
+  peerDependencies:
+    aws-cdk-lib: ^2.63.0
+    constructs: ^10.0.5
+  checksum: 10c0/5e4835cb557009f10ea5b06c3af338fdb179c7f303c56061ae40255062feb599f1cde06b4870db1a0db77b8692afc8730221e281d0991e639b70702468f95929
+  languageName: node
+  linkType: hard
+
 "case@npm:1.6.3":
   version: 1.6.3
   resolution: "case@npm:1.6.3"
@@ -3761,16 +3773,16 @@ __metadata:
   languageName: node
   linkType: hard
 
-"htsget-lambda@npm:^0.8.7":
-  version: 0.8.7
-  resolution: "htsget-lambda@npm:0.8.7"
+"htsget-lambda@npm:^0.9.0":
+  version: 0.9.0
+  resolution: "htsget-lambda@npm:0.9.0"
   dependencies:
-    cargo-lambda-cdk: "npm:^0.0.31"
+    cargo-lambda-cdk: "npm:^0.0.33"
   peerDependencies:
     aws-cdk-lib: ^2.112.0
   bin:
     htsget_app: bin/htsget-lambda.js
-  checksum: 10c0/4b92b1e0416ef3f24b97f3b25613d5a17ce8fcc75576c43b8c0827a3ef165ebc229e63a174093518dbccafefd6bbb676411e00113ae8ac64cb545eea59afe3b5
+  checksum: 10c0/404ba21622ad1b39fd363265bff73f510604a2ac204c972fa1a107eec70df95f0990de4991b6b3f0f41c29b1386daebb5f3fa43241f2d37d5207d946022e87d1
   languageName: node
   linkType: hard
 
@@ -5082,7 +5094,7 @@ __metadata:
     eslint: "npm:^9.19.0"
     eslint-config-prettier: "npm:^10.0.1"
     globals: "npm:^15.14.0"
-    htsget-lambda: "npm:^0.8.7"
+    htsget-lambda: "npm:^0.9.0"
     jest: "npm:^29.7.0"
     jest-junit: "npm:^16.0.0"
     prettier: "npm:^3.4.2"

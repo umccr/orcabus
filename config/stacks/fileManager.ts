@@ -21,6 +21,7 @@ import {
   ntsmBucket,
   dataSharingCacheBucket,
   externalProjectBuckets,
+  fileManagerDomainPrefix,
 } from '../constants';
 
 export const fileManagerBuckets = (stage: AppStage): string[] => {
@@ -69,7 +70,7 @@ export const getFileManagerStackProps = (stage: AppStage): FilemanagerConfig => 
       corsAllowOrigins: corsAllowOrigins[stage],
       apiGwLogsConfig: logsApiGatewayConfig[stage],
       apiName: 'FileManager',
-      customDomainNamePrefix: 'file',
+      customDomainNamePrefix: fileManagerDomainPrefix,
     },
   };
 };

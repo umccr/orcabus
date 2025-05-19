@@ -2,13 +2,14 @@ import {
   AppStage,
   cognitoApiGatewayConfig,
   corsAllowOrigins,
+  fileManagerIngestRoleName,
   logsApiGatewayConfig,
   vpcProps,
 } from '../constants';
-import { HtsgetStackConfigurableProps } from '../../lib/workload/stateless/stacks/htsget/stack';
+import { HtsgetStackProps } from '../../lib/workload/stateless/stacks/htsget/stack';
 import { fileManagerBuckets, fileManagerInventoryBuckets } from './fileManager';
 
-export const getHtsgetProps = (stage: AppStage): HtsgetStackConfigurableProps => {
+export const getHtsgetProps = (stage: AppStage): HtsgetStackProps => {
   const inventorySourceBuckets = fileManagerInventoryBuckets(stage);
   const eventSourceBuckets = fileManagerBuckets(stage);
 
@@ -22,5 +23,6 @@ export const getHtsgetProps = (stage: AppStage): HtsgetStackConfigurableProps =>
       customDomainNamePrefix: 'htsget-file',
     },
     buckets: [...inventorySourceBuckets, ...eventSourceBuckets],
+    roleName: fileManagerIngestRoleName,
   };
 };

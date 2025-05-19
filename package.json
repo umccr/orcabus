@@ -33,7 +33,7 @@
     "constructs": "^10.4.2",
     "core-js-pure": "npm:3.41.0",
     "dotenv": "^16.4.7",
-    "htsget-lambda": "^0.8.7",
+    "htsget-lambda": "^0.9.0",
     "source-map-support": "^0.5.21",
     "sqs-dlq-monitoring": "^1.2.20"
   },

@@ -159,6 +159,7 @@ export const fileManagerPresignUserSecret = 'orcabus/file-manager-presign-user';
 validateSecretName(fileManagerPresignUserSecret);
 
 export const fileManagerPresignUser = 'orcabus-file-manager-presign-user'; // pragma: allowlist secret
+export const fileManagerDomainPrefix = 'file';
 
 export const dataMoverRoleName = 'orcabus-data-mover-role';
 
