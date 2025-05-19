@@ -48,7 +48,7 @@ import {
   OraCompressionIcav2PipelineManagerStackProps,
 } from './stacks/ora-compression-manager/deploy';
 
-import { FMAnnotator, FMAnnotatorConfigurableProps } from './stacks/fmannotator/deploy/stack';
+import { FMAnnotator, FMAnnotatorProps } from './stacks/fmannotator/deploy/stack';
 import {
   PieriandxPipelineManagerStack,
   PierianDxPipelineManagerStackProps,
@@ -67,7 +67,7 @@ import {
 } from './stacks/ora-decompression-manager/deploy';
 import { PgDDStack, PgDDStackProps } from './stacks/pg-dd/deploy/stack';
 import { DataMigrateStack, DataMigrateStackProps } from './stacks/data-migrate/deploy/stack';
-import { HtsgetStack, HtsgetStackConfigurableProps } from './stacks/htsget/stack';
+import { HtsgetStack, HtsgetStackProps } from './stacks/htsget/stack';
 import { SampleSheetCheckerStackProps } from './stacks/sample-sheet-check/stack';
 import { FastqManagerStack, FastqManagerStackProps } from './stacks/fastq-manager/deploy/stack';
 import {
@@ -105,9 +105,9 @@ export interface StatelessStackCollectionProps {
   dataSchemaStackProps: SchemaStackProps;
   bclConvertManagerStackProps: BclConvertManagerStackProps;
   stackyMcStackFaceProps: GlueStackProps;
-  fmAnnotatorProps: FMAnnotatorConfigurableProps;
+  fmAnnotatorProps: FMAnnotatorProps;
   dataMigrateProps: DataMigrateStackProps;
-  htsgetProps: HtsgetStackConfigurableProps;
+  htsgetProps: HtsgetStackProps;
   sampleSheetCheckerProps: SampleSheetCheckerStackProps;
   pgDDProps?: PgDDStackProps;
   fastqManagerStackProps: FastqManagerStackProps;
@@ -166,11 +166,10 @@ export class StatelessStackCollection {
       ...statelessConfiguration.dataSchemaStackProps,
     });
 
-    const fileManagerStack = new Filemanager(scope, 'FileManagerStack', {
+    new Filemanager(scope, 'FileManagerStack', {
       ...this.createTemplateProps(env, 'FileManagerStack'),
       ...statelessConfiguration.fileManagerStackProps,
     });
-    this.fileManagerStack = fileManagerStack;
 
     this.metadataManagerStack = new MetadataManagerStack(scope, 'MetadataManagerStack', {
       ...this.createTemplateProps(env, 'MetadataManagerStack'),
@@ -324,7 +323,6 @@ export class StatelessStackCollection {
     this.fmAnnotator = new FMAnnotator(scope, 'FMAnnotatorStack', {
       ...this.createTemplateProps(env, 'FMAnnotatorStack'),
       ...statelessConfiguration.fmAnnotatorProps,
-      domainName: fileManagerStack.domainName,
     });
     this.dataMigrate = new DataMigrateStack(scope, 'DataMigrateStack', {
       ...this.createTemplateProps(env, 'DataMigrateStack'),
@@ -333,7 +331,6 @@ export class StatelessStackCollection {
     this.htsgetStack = new HtsgetStack(scope, 'HtsgetStack', {
       ...this.createTemplateProps(env, 'HtsgetStack'),
       ...statelessConfiguration.htsgetProps,
-      role: fileManagerStack.ingestRole,
     });
 
     /**

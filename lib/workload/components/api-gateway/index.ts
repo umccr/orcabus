@@ -69,10 +69,7 @@ export class ApiGatewayConstruct extends Construct {
 
     // umccr acm arn
     const umccrAcmArn = StringParameter.valueForStringParameter(this, '/umccr/certificate_arn');
-    const hostedDomainName = StringParameter.valueForStringParameter(
-      this,
-      '/hosted_zone/umccr/name'
-    );
+    const hostedDomainName = ApiGatewayConstruct.hostedDomainName(this);
     const hostedZoneId = StringParameter.valueForStringParameter(this, '/hosted_zone/umccr/id');
 
     this._domainName = `${props.customDomainNamePrefix}.${hostedDomainName}`;
@@ -235,5 +232,12 @@ export class ApiGatewayConstruct extends Construct {
 
   get domainName(): string {
     return this._domainName;
+  }
+
+  /**
+   * Get the domain name for the UMCCR hosted zone.
+   */
+  static hostedDomainName(scope: Construct): string {
+    return StringParameter.valueForStringParameter(scope, '/hosted_zone/umccr/name');
   }
 }

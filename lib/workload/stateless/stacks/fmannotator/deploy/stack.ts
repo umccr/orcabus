@@ -16,6 +16,7 @@ import { ISecret, Secret } from 'aws-cdk-lib/aws-secretsmanager';
 import { NamedLambdaRole } from '../../../../components/named-lambda-role';
 import { ManagedPolicy, PolicyStatement, Role } from 'aws-cdk-lib/aws-iam';
 import { IQueue, Queue } from 'aws-cdk-lib/aws-sqs';
+import { ApiGatewayConstruct } from '../../../../components/api-gateway';
 
 /**
  * Config for the FM annotator.
@@ -25,19 +26,13 @@ export type FMAnnotatorConfig = {
   eventBusName: string;
   eventDLQName: string;
   jwtSecretName: string;
+  customDomainNamePrefix: string;
 };
 
 /**
  * Props for the FM annotator stack which can be configured
  */
-export type FMAnnotatorConfigurableProps = StackProps & FMAnnotatorConfig;
-
-/**
- * Props for the FM annotator stack.
- */
-export type FMAnnotatorProps = FMAnnotatorConfigurableProps & {
-  domainName: string;
-};
+export type FMAnnotatorProps = StackProps & FMAnnotatorConfig;
 
 /**
  * Construct used to configure the FM annotator.
@@ -75,8 +70,9 @@ export class FMAnnotator extends Stack {
       )
     );
 
+    const domain = ApiGatewayConstruct.hostedDomainName(this);
     const env = {
-      FMANNOTATOR_FILE_MANAGER_ENDPOINT: `https://${props.domainName}`,
+      FMANNOTATOR_FILE_MANAGER_ENDPOINT: `https://${props.customDomainNamePrefix}.${domain}`,
       FMANNOTATOR_FILE_MANAGER_SECRET_NAME: tokenSecret.secretName,
       FMANNOTATOR_QUEUE_NAME: this.dlq.queueName,
       FMANNOTATOR_QUEUE_MAX_MESSAGES: '100',
