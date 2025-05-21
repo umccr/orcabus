@@ -2,10 +2,6 @@ import { Construct } from 'constructs';
 import { Stack, Environment, StackProps } from 'aws-cdk-lib';
 import { FilemanagerProps, Filemanager } from './stacks/filemanager/deploy/stack';
 import {
-  MetadataManagerStack,
-  MetadataManagerStackProps,
-} from './stacks/metadata-manager/deploy/stack';
-import {
   BsshIcav2FastqCopyManagerStack,
   BsshIcav2FastqCopyManagerStackProps,
 } from './stacks/bssh-icav2-fastq-copy-manager/deploy/stack';
@@ -86,7 +82,6 @@ import {
 import { FastqGlueStack, FastqGlueStackProps } from './stacks/fastq-glue/deploy';
 
 export interface StatelessStackCollectionProps {
-  metadataManagerStackProps: MetadataManagerStackProps;
   fileManagerStackProps: FilemanagerProps;
   bsshIcav2FastqCopyManagerStackProps: BsshIcav2FastqCopyManagerStackProps;
   bclconvertInteropQcIcav2PipelineManagerStackProps: BclconvertInteropQcIcav2PipelineManagerStackProps;
@@ -143,7 +138,6 @@ export class StatelessStackCollection {
   readonly dataMigrate: Stack;
   readonly htsgetStack: Stack;
   readonly pgDDStack: Stack;
-  readonly sampleSheetCheckerStack: Stack;
   readonly fastqManagerStack: Stack;
   readonly fastqUnarchivingManagerStack: Stack;
   readonly fastqSyncManagerStack: Stack;
@@ -156,6 +150,30 @@ export class StatelessStackCollection {
     env: Environment,
     statelessConfiguration: StatelessStackCollectionProps
   ) {
+    /**
+     * Migrated to https://github.com/orcabus
+     */
+
+    // this.metadataManagerStack = new MetadataManagerStack(scope, 'MetadataManagerStack', {
+    //   ...this.createTemplateProps(env, 'MetadataManagerStack'),
+    //   ...statelessConfiguration.metadataManagerStackProps,
+    // });
+
+    // this.sequenceRunManagerStack = new SequenceRunManagerStack(scope, 'SequenceRunManagerStack', {
+    //   ...this.createTemplateProps(env, 'SequenceRunManagerStack'),
+    //   ...statelessConfiguration.sequenceRunManagerStackProps,
+    // });
+
+    // this.workflowManagerStack = new WorkflowManagerStack(scope, 'WorkflowManagerStack', {
+    //   ...this.createTemplateProps(env, 'WorkflowManagerStack'),
+    //   ...statelessConfiguration.workflowManagerStackProps,
+    // });
+
+    // this.sampleSheetCheckerStack = new SampleSheetCheckerStack(scope, 'SampleSheetCheckerStack', {
+    //   ...this.createTemplateProps(env, 'SampleSheetCheckerStack'),
+    //   ...statelessConfiguration.sampleSheetCheckerProps,
+    // });
+
     this.eventSchemaStack = new SchemaStack(scope, 'EventSchemaStack', {
       ...this.createTemplateProps(env, 'EventSchemaStack'),
       ...statelessConfiguration.eventSchemaStackProps,
@@ -170,19 +188,6 @@ export class StatelessStackCollection {
       ...this.createTemplateProps(env, 'FileManagerStack'),
       ...statelessConfiguration.fileManagerStackProps,
     });
-
-    this.metadataManagerStack = new MetadataManagerStack(scope, 'MetadataManagerStack', {
-      ...this.createTemplateProps(env, 'MetadataManagerStack'),
-      ...statelessConfiguration.metadataManagerStackProps,
-    });
-
-    /**
-     * Migrated to https://github.com/orcabus
-     */
-    // this.sequenceRunManagerStack = new SequenceRunManagerStack(scope, 'SequenceRunManagerStack', {
-    //   ...this.createTemplateProps(env, 'SequenceRunManagerStack'),
-    //   ...statelessConfiguration.sequenceRunManagerStackProps,
-    // });
 
     this.bsshIcav2FastqCopyManagerStack = new BsshIcav2FastqCopyManagerStack(
       scope,
@@ -307,14 +312,6 @@ export class StatelessStackCollection {
       ...statelessConfiguration.bclConvertManagerStackProps,
     });
 
-    /**
-     * Migrated to https://github.com/orcabus
-     */
-    // this.workflowManagerStack = new WorkflowManagerStack(scope, 'WorkflowManagerStack', {
-    //   ...this.createTemplateProps(env, 'WorkflowManagerStack'),
-    //   ...statelessConfiguration.workflowManagerStackProps,
-    // });
-
     this.stackyMcStackFaceStack = new GlueStack(scope, 'StackyMcStackFaceStack', {
       ...this.createTemplateProps(env, 'StackyMcStackFaceStack'),
       ...statelessConfiguration.stackyMcStackFaceProps,
@@ -332,14 +329,6 @@ export class StatelessStackCollection {
       ...this.createTemplateProps(env, 'HtsgetStack'),
       ...statelessConfiguration.htsgetProps,
     });
-
-    /**
-     * Migrated to https://github.com/orcabus
-     */
-    // this.sampleSheetCheckerStack = new SampleSheetCheckerStack(scope, 'SampleSheetCheckerStack', {
-    //   ...this.createTemplateProps(env, 'SampleSheetCheckerStack'),
-    //   ...statelessConfiguration.sampleSheetCheckerProps,
-    // });
 
     if (statelessConfiguration.pgDDProps) {
       this.pgDDStack = new PgDDStack(scope, 'PgDDStack', {
