@@ -25,9 +25,10 @@ start-all-service:
 	docker compose up --wait -d db
 
 	# Insert all dump data in before running servers
-	@(cd lib/workload/stateless/stacks/metadata-manager && $(MAKE) reset-db)
-	@(cd lib/workload/stateless/stacks/sequence-run-manager && $(MAKE) reset-db)
-	@(cd lib/workload/stateless/stacks/workflow-manager && $(MAKE) reset-db)
+	# migrated to orcabus org
+	# @(cd lib/workload/stateless/stacks/metadata-manager && $(MAKE) reset-db)
+	# @(cd lib/workload/stateless/stacks/sequence-run-manager && $(MAKE) reset-db)
+	# @(cd lib/workload/stateless/stacks/workflow-manager && $(MAKE) reset-db)
 	@(cd lib/workload/stateless/stacks/filemanager && $(MAKE) reset-db)
 
 	# Running the rest of the µ-service server
