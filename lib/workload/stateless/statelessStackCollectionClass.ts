@@ -1,6 +1,6 @@
 import { Construct } from 'constructs';
 import { Stack, Environment, StackProps } from 'aws-cdk-lib';
-import { FilemanagerProps, Filemanager } from './stacks/filemanager/deploy/stack';
+import { FilemanagerProps } from './stacks/filemanager/deploy/stack';
 import {
   BsshIcav2FastqCopyManagerStack,
   BsshIcav2FastqCopyManagerStackProps,
@@ -174,6 +174,11 @@ export class StatelessStackCollection {
     //   ...statelessConfiguration.sampleSheetCheckerProps,
     // });
 
+    // new Filemanager(scope, 'FileManagerStack', {
+    //   ...this.createTemplateProps(env, 'FileManagerStack'),
+    //   ...statelessConfiguration.fileManagerStackProps,
+    // });
+
     this.eventSchemaStack = new SchemaStack(scope, 'EventSchemaStack', {
       ...this.createTemplateProps(env, 'EventSchemaStack'),
       ...statelessConfiguration.eventSchemaStackProps,
@@ -182,11 +187,6 @@ export class StatelessStackCollection {
     this.dataSchemaStack = new SchemaStack(scope, 'DataSchemaStack', {
       ...this.createTemplateProps(env, 'DataSchemaStack'),
       ...statelessConfiguration.dataSchemaStackProps,
-    });
-
-    new Filemanager(scope, 'FileManagerStack', {
-      ...this.createTemplateProps(env, 'FileManagerStack'),
-      ...statelessConfiguration.fileManagerStackProps,
     });
 
     this.bsshIcav2FastqCopyManagerStack = new BsshIcav2FastqCopyManagerStack(
