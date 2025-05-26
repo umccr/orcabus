@@ -65,7 +65,7 @@ import {
   OraCompressionIcav2PipelineTable,
   OraCompressionIcav2PipelineTableStackProps,
 } from './stacks/ora-decompression-dynamodb/deploy/stack';
-import { AccessKeySecret, AccessKeySecretStackProps } from './stacks/access-key-secret';
+import { AccessKeySecretStackProps } from './stacks/access-key-secret';
 import {
   FastqManagerTable,
   FastqManagerTableStackProps,
@@ -149,6 +149,15 @@ export class StatefulStackCollection {
     env: Environment,
     statefulConfiguration: StatefulStackCollectionProps
   ) {
+    /**
+     * Migrated to https://github.com/orcabus
+     */
+
+    // this.accessKeySecretStack = new AccessKeySecret(scope, 'AccessKeySecretStack', {
+    //   ...this.createTemplateProps(env, 'AccessKeySecretStack'),
+    //   ...statefulConfiguration.accessKeySecretStackProps,
+    // });
+
     // Currently this only needs to be deployed if bucketName exist as props
     if (statefulConfiguration.dataBucketStackProps.bucketName) {
       this.dataBucketStack = new DataBucketStack(scope, 'DataBucketStack', {
@@ -290,11 +299,6 @@ export class StatefulStackCollection {
     this.sashPipelineTableStack = new SashNfPipelineTable(scope, 'SashNfPipelineTableStack', {
       ...this.createTemplateProps(env, 'SashNfPipelineTableStack'),
       ...statefulConfiguration.sashPipelineTableStackProps,
-    });
-
-    this.accessKeySecretStack = new AccessKeySecret(scope, 'AccessKeySecretStack', {
-      ...this.createTemplateProps(env, 'AccessKeySecretStack'),
-      ...statefulConfiguration.accessKeySecretStackProps,
     });
 
     this.fastqManagerTableStack = new FastqManagerTable(scope, 'FastqManagerTableStack', {
