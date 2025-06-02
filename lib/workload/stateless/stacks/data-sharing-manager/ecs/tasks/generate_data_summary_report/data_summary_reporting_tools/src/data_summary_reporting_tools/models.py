@@ -60,7 +60,7 @@ class Sample(TypedDict):
     orcabusId: str
     sampleId: str
     externalSampleId: str
-    source: str
+    source: Optional[str]
 
 
 class Individual(TypedDict):
