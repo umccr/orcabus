@@ -24,6 +24,24 @@ export const getEventSchemaStackProps = (): SchemaStackProps => {
       },
       {
         ...defaultProps,
+        schemaName: 'orcabus.sequencerunmanager@SequenceRunSampleSheetChange',
+        schemaDescription: 'Sample sheet change event for sequencing run by SequenceRunManager',
+        schemaLocation: path.join(
+          __dirname,
+          docBase + '/sequencerunmanager/SequenceRunSampleSheetChange.schema.json'
+        ),
+      },
+      {
+        ...defaultProps,
+        schemaName: 'orcabus.sequencerunmanager@SequenceRunLibraryLinkingChange',
+        schemaDescription: 'Library linking change event for sequencing run by SequenceRunManager',
+        schemaLocation: path.join(
+          __dirname,
+          docBase + '/sequencerunmanager/SequenceRunLibraryLinkingChange.schema.json'
+        ),
+      },
+      {
+        ...defaultProps,
         schemaName: 'orcabus.workflowmanager@WorkflowRunStateChange',
         schemaDescription: 'State change event for workflow run by WorkflowManager',
         schemaLocation: path.join(
