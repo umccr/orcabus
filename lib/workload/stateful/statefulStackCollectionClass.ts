@@ -84,10 +84,12 @@ import {
   DataSharingS3AndTableStack,
   DataSharingS3AndTableStackProps,
 } from './stacks/data-sharing-s3-and-db/deploy/stack';
+import { SharedStackProps } from './stacks/shared/stack';
 
 export interface StatefulStackCollectionProps {
   dataBucketStackProps: DataBucketStackProps;
   authorizationManagerStackProps: AuthorizationManagerStackProps;
+  sharedStackProps: SharedStackProps;
   postgresManagerStackProps: PostgresManagerStackProps;
   tokenServiceStackProps: TokenServiceStackProps;
   icaEventPipeStackProps: IcaEventPipeStackProps;
@@ -117,6 +119,7 @@ export class StatefulStackCollection {
 
   readonly authorizationManagerStack: Stack;
   readonly dataBucketStack: Stack;
+  readonly sharedStack: Stack;
   readonly postgresManagerStack: Stack;
   readonly tokenServiceStack: Stack;
   readonly icaEventPipeStack: Stack;
