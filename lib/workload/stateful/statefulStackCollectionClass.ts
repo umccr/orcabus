@@ -1,7 +1,5 @@
 import { Construct } from 'constructs';
 import { Stack, Environment, StackProps } from 'aws-cdk-lib';
-
-import { SharedStack, SharedStackProps } from './stacks/shared/stack';
 import { TokenServiceStackProps, TokenServiceStack } from './stacks/token-service/deploy/stack';
 import { IcaEventPipeStack, IcaEventPipeStackProps } from './stacks/ica-event-pipe/stack';
 import {
@@ -90,7 +88,6 @@ import {
 export interface StatefulStackCollectionProps {
   dataBucketStackProps: DataBucketStackProps;
   authorizationManagerStackProps: AuthorizationManagerStackProps;
-  sharedStackProps: SharedStackProps;
   postgresManagerStackProps: PostgresManagerStackProps;
   tokenServiceStackProps: TokenServiceStackProps;
   icaEventPipeStackProps: IcaEventPipeStackProps;
@@ -120,7 +117,6 @@ export class StatefulStackCollection {
 
   readonly authorizationManagerStack: Stack;
   readonly dataBucketStack: Stack;
-  readonly sharedStack: Stack;
   readonly postgresManagerStack: Stack;
   readonly tokenServiceStack: Stack;
   readonly icaEventPipeStack: Stack;
@@ -158,6 +154,11 @@ export class StatefulStackCollection {
     //   ...statefulConfiguration.accessKeySecretStackProps,
     // });
 
+    // this.sharedStack = new SharedStack(scope, 'SharedStack', {
+    //   ...this.createTemplateProps(env, 'SharedStack'),
+    //   ...statefulConfiguration.sharedStackProps,
+    // });
+
     // Currently this only needs to be deployed if bucketName exist as props
     if (statefulConfiguration.dataBucketStackProps.bucketName) {
       this.dataBucketStack = new DataBucketStack(scope, 'DataBucketStack', {
@@ -174,11 +175,6 @@ export class StatefulStackCollection {
         ...statefulConfiguration.authorizationManagerStackProps,
       }
     );
-
-    this.sharedStack = new SharedStack(scope, 'SharedStack', {
-      ...this.createTemplateProps(env, 'SharedStack'),
-      ...statefulConfiguration.sharedStackProps,
-    });
 
     this.postgresManagerStack = new PostgresManagerStack(scope, 'PostgresManagerStack', {
       ...this.createTemplateProps(env, 'PostgresManagerStack'),

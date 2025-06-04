@@ -1,7 +1,6 @@
 import { region, AppStage, accountIdAlias } from './constants';
 import { StatefulStackCollectionProps } from '../lib/workload/stateful/statefulStackCollectionClass';
 import { StatelessStackCollectionProps } from '../lib/workload/stateless/statelessStackCollectionClass';
-import { getSharedStackProps } from './stacks/shared';
 import { getIcaEventPipeStackProps } from './stacks/icaEventPipe';
 import { getTokenServiceStackProps } from './stacks/tokenService';
 import { getPostgresManagerStackProps } from './stacks/postgresManager';
@@ -107,7 +106,6 @@ export const getEnvironmentConfig = (stage: AppStage): EnvironmentConfig | null 
     statefulConfig: {
       authorizationManagerStackProps: getAuthorizationManagerStackProps(stage),
       dataBucketStackProps: getDataBucketStackProps(stage),
-      sharedStackProps: getSharedStackProps(stage),
       postgresManagerStackProps: getPostgresManagerStackProps(),
       tokenServiceStackProps: getTokenServiceStackProps(),
       icaEventPipeStackProps: getIcaEventPipeStackProps(),
