@@ -355,10 +355,10 @@ export class StatelessStackCollection {
       ...this.createTemplateProps(env, 'FastqSyncManagerStack'),
       ...statelessConfiguration.fastqSyncManagerStackProps,
     });
-    this.icav2DataCopyManagerStack = new Icav2DataCopyManagerStack(scope, 'Icav2CopyManagerStack', {
-      ...this.createTemplateProps(env, 'Icav2CopyManagerStack'),
-      ...statelessConfiguration.icav2DataCopyManagerStackProps,
-    });
+    // this.icav2DataCopyManagerStack = new Icav2DataCopyManagerStack(scope, 'Icav2CopyManagerStack', {
+    //   ...this.createTemplateProps(env, 'Icav2CopyManagerStack'),
+    //   ...statelessConfiguration.icav2DataCopyManagerStackProps,
+    // });
     this.dataSharingStack = new DataSharingStack(scope, 'DataSharingStack', {
       ...this.createTemplateProps(env, 'DataSharingStack'),
       ...statelessConfiguration.dataSharingStackProps,
