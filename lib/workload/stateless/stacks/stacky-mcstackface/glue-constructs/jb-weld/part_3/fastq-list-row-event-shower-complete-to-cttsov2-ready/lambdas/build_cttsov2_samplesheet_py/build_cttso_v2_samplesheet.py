@@ -629,6 +629,33 @@ def handler(event, context):
         }
     ]
 
+    # If any of the index ids end with V3, we might need to a bit of a 'switcheroo' to
+    # convince the dragen tso500 pipeline we can pass the samplesheet validation step
+    for tso500l_data_row in tso500l_data:
+        if tso500l_data_row["i7_index_id"].endswith("V3"):
+            # Update the tso500 row i7 index id and index
+            tso500l_data_row["i7_index_id"] = tso500l_data_row["i7_index_id"].replace("V3", "")
+            tso500l_data_row["index"] = next(filter(
+                lambda index_dict: index_dict.get("index_id") == tso500l_data_row["i7_index_id"],
+                V2_CTTSO_VALID_INDEXES
+            )).get("index")
+            # We will also need to update the bclconvert data row index
+            for bclconvert_data_row in bclconvert_data:
+                if bclconvert_data_row["sample_id"] == tso500l_data_row["sample_id"]:
+                    bclconvert_data_row["index"] = tso500l_data_row["index"]
+
+        if tso500l_data_row["i5_index_id"].endswith("V3"):
+            # Update the tso500 row i5 index id and index2
+            tso500l_data_row["i5_index_id"] = tso500l_data_row["i5_index_id"].replace("V3", "")
+            tso500l_data_row["index2"] = next(filter(
+                lambda index_dict: index_dict.get("index_id") == tso500l_data_row["i5_index_id"],
+                V2_CTTSO_VALID_INDEXES
+            )).get("index2")
+            # We will also need to update the bclconvert data row index
+            for bclconvert_data_row in bclconvert_data:
+                if bclconvert_data_row["sample_id"] == tso500l_data_row["sample_id"]:
+                    bclconvert_data_row["index2"] = tso500l_data_row["index2"]
+
     return {
         "samplesheet": {
             "header": header,
@@ -640,7 +667,7 @@ def handler(event, context):
         }
     }
 
-# V2 SampleSheet
+# ## V2 SampleSheet
 # if __name__ == "__main__":
 #     import json
 #     print(
@@ -687,8 +714,8 @@ def handler(event, context):
 #     #         "bclconvert_data": [
 #     #             {
 #     #                 "sample_id": "L2500613",
-#     #                 "index": "CGACATCCGA",
-#     #                 "index2": "AATGAACGTA",
+#     #                 "index": "CGTCTCATAT",
+#     #                 "index2": "TATAGTAGCT",
 #     #                 "lane": 4
 #     #             }
 #     #         ],
@@ -703,10 +730,10 @@ def handler(event, context):
 #     #             {
 #     #                 "sample_id": "L2500613",
 #     #                 "sample_type": "DNA",
-#     #                 "index": "CGACATCCGA",
-#     #                 "index2": "AATGAACGTA",
-#     #                 "i7_index_id": "UDP0003V3",
-#     #                 "i5_index_id": "UDP0003V3"
+#     #                 "index": "CGTCTCATAT",
+#     #                 "index2": "TATAGTAGCT",
+#     #                 "i7_index_id": "UDP0003",
+#     #                 "i5_index_id": "UDP0003"
 #     #             }
 #     #         ]
 #     #     }
