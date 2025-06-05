@@ -322,14 +322,14 @@ export class StatefulStackCollection {
         ...statefulConfiguration.fastqSyncManagerTableStackProps,
       }
     );
-    this.icav2DataCopyTableStack = new Icav2DataCopyManagerTable(
-      scope,
-      'Icav2DataCopyManagerTableStack',
-      {
-        ...this.createTemplateProps(env, 'Icav2DataCopyManagerTableStack'),
-        ...statefulConfiguration.icav2DataCopyTableStackProps,
-      }
-    );
+    // this.icav2DataCopyTableStack = new Icav2DataCopyManagerTable(
+    //   scope,
+    //   'Icav2DataCopyManagerTableStack',
+    //   {
+    //     ...this.createTemplateProps(env, 'Icav2DataCopyManagerTableStack'),
+    //     ...statefulConfiguration.icav2DataCopyTableStackProps,
+    //   }
+    // );
     this.dataSharingS3AndTableStack = new DataSharingS3AndTableStack(
       scope,
       'DataSharingS3AndTableStack',
