@@ -1,7 +1,5 @@
 import { Construct } from 'constructs';
 import { Stack, Environment, StackProps } from 'aws-cdk-lib';
-
-import { SharedStack, SharedStackProps } from './stacks/shared/stack';
 import { TokenServiceStackProps, TokenServiceStack } from './stacks/token-service/deploy/stack';
 import { IcaEventPipeStack, IcaEventPipeStackProps } from './stacks/ica-event-pipe/stack';
 import {
@@ -86,6 +84,7 @@ import {
   DataSharingS3AndTableStack,
   DataSharingS3AndTableStackProps,
 } from './stacks/data-sharing-s3-and-db/deploy/stack';
+import { SharedStackProps } from './stacks/shared/stack';
 
 export interface StatefulStackCollectionProps {
   dataBucketStackProps: DataBucketStackProps;
@@ -158,6 +157,11 @@ export class StatefulStackCollection {
     //   ...statefulConfiguration.accessKeySecretStackProps,
     // });
 
+    // this.sharedStack = new SharedStack(scope, 'SharedStack', {
+    //   ...this.createTemplateProps(env, 'SharedStack'),
+    //   ...statefulConfiguration.sharedStackProps,
+    // });
+
     // Currently this only needs to be deployed if bucketName exist as props
     if (statefulConfiguration.dataBucketStackProps.bucketName) {
       this.dataBucketStack = new DataBucketStack(scope, 'DataBucketStack', {
@@ -174,11 +178,6 @@ export class StatefulStackCollection {
         ...statefulConfiguration.authorizationManagerStackProps,
       }
     );
-
-    this.sharedStack = new SharedStack(scope, 'SharedStack', {
-      ...this.createTemplateProps(env, 'SharedStack'),
-      ...statefulConfiguration.sharedStackProps,
-    });
 
     this.postgresManagerStack = new PostgresManagerStack(scope, 'PostgresManagerStack', {
       ...this.createTemplateProps(env, 'PostgresManagerStack'),
