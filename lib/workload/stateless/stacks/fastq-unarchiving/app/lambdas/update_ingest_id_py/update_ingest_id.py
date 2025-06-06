@@ -20,7 +20,8 @@ def handler(event, context) -> Dict[str, bool]:
     """
     Not a trivial task, we first need to match the ingest id to the file id
     and then update the ingest id for the file.
-    Therefore we get all fastqIds from the top-level map, and to match to the bucket, key prefix provided in the bottom-level map.
+    Therefore we get all fastqIds from the top-level map, and to match to the bucket,
+    key prefix provided in the bottom-level map.
     :param event:
     :param context:
     :return:

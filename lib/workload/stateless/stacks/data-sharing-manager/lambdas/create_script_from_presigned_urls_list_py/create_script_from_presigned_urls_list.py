@@ -163,17 +163,20 @@ def get_script_template(
     done
 
     # Check if download path is set
-    if [ -z "$download_path" ]; then
+    if [ -z "${download_path}" ]; then
         echo "Error! Download path is required" 1>&2
         print_help
         exit 1
     fi
 
     # Check if download path exists
-    if [ ! -d "$download_path" ]; then
+    if [ ! -d "${download_path}" ]; then
         echo "Error! Download path '${download_path}' does not exist" 1>&2
         exit 1
     fi
+    
+    # Standardise the download path
+    download_path="$(dirname "${download_path}")/$(basename "${download_path}")"
 
     # Provide summary
     echo "Downloading __FILE_COUNT__ files to ${download_path}" 1>&2
@@ -232,7 +235,7 @@ def get_download_file_template(download_url_dicts: List[Dict[str, str]]):
         )),
         display_tree=generate_tree(
             list(map(
-                lambda donwload_url_dict_iter_: Path(donwload_url_dict_iter_['relativePath']),
+                lambda download_url_dict_iter_: Path(download_url_dict_iter_['relativePath']),
                 download_url_dicts
             ))
         )
@@ -245,7 +248,7 @@ def get_download_file_template(download_url_dicts: List[Dict[str, str]]):
                 [
                     "download_file",
                     f"\"{download_url_dict_iter_with_index_[1]['presignedUrl']}\"",
-                    f"\"{download_url_dict_iter_with_index_[1]['relativePath']}\"",
+                    f"\"${{download_path}}/{download_url_dict_iter_with_index_[1]['relativePath']}\"",
                     f"\"{download_url_dict_iter_with_index_[1]['fileSizeInBytes']}\"",
                     f"\"{format_size(download_url_dict_iter_with_index_[1]['fileSizeInBytes'], binary=True)}\"",
                     f"\"{(download_url_dict_iter_with_index_[0] + 1)}\"",  # Enumerate
