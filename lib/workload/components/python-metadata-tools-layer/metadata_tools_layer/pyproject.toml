@@ -15,7 +15,7 @@ repository = "https://github.com/umccr/orcabus"
 
 [tool.poetry.dependencies]
 python = "^3.12, <3.13"
-requests = "^2.31.0"
+requests = "^2.32.4"
 
 [tool.poetry.group.dev]
 optional = true
