@@ -8,8 +8,8 @@ import * as eventsTargets from 'aws-cdk-lib/aws-events-targets';
 /*
 Part 2
 
-Input Event Source: `orcabus.instrumentrunmanager`
-Input Event DetailType: `FastqListRowStateChange`
+Input Event Source: `orcabus.fastqglue`
+Input Event DetailType: `StackyFastqListRowStateChange`
 Input Event status: `newFastqListRow`
 
 * Populate the fastq list row attributes for the rgid for this workflow
@@ -24,9 +24,9 @@ export class WtsPopulateFastqListRowConstruct extends Construct {
   public readonly WtsPopulateFastqListRowDbRowMap = {
     prefix: 'modpodge-update-fqlr',
     tablePartition: 'fastq_list_row',
-    triggerSource: 'orcabus.instrumentrunmanager',
+    triggerSource: 'orcabus.fastqglue',
     triggerStatus: 'newFastqListRow',
-    triggerDetailType: 'FastqListRowStateChange',
+    triggerDetailType: 'StackyFastqListRowStateChange',
   };
 
   constructor(scope: Construct, id: string, props: WtsPopulateFastqListRowDbRowConstructProps) {

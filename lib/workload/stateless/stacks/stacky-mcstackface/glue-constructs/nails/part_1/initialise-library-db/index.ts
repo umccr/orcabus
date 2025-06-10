@@ -33,7 +33,7 @@ export class PieriandxInitialiseLibraryConstruct extends Construct {
     tablePartition: {
       library: 'library',
     },
-    triggerSource: 'orcabus.instrumentrunmanager',
+    triggerSource: 'orcabus.fastqglue',
     triggerStatus: 'LibraryInSamplesheet',
     triggerDetailType: 'SamplesheetMetadataUnion',
     triggerAssayType: {

@@ -11,7 +11,7 @@ import * as lambda from 'aws-cdk-lib/aws-lambda';
 Part 7
 
 Input Event Source: `orcabus.wgtsqcinputeventglue`
-Input Event DetailType: `FastqListRowStateChange`
+Input Event DetailType: `StackyFastqListRowStateChange`
 Input Event status: `QcComplete`
 
 Output Event Source: `orcabus.wgtsqcinputeventglue`
@@ -38,7 +38,7 @@ export class WgtsQcLibraryQcCompleteConstruct extends Construct {
     payloadVersion: '2024.07.16',
     triggerSource: 'orcabus.wgtsqcinputeventglue',
     triggerStatus: 'QC_COMPLETE',
-    triggerDetailType: 'FastqListRowStateChange',
+    triggerDetailType: 'StackyFastqListRowStateChange',
     outputSource: 'orcabus.wgtsqcinputeventglue',
     outputDetailType: 'LibraryStateChange',
     outputStatus: 'QC_COMPLETE',

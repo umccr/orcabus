@@ -31,7 +31,7 @@ export class UmccriseGlueHandlerConstruct extends NestedStack {
     /*
     Part 1
 
-    Input Event Source: `orcabus.instrumentrunmanager`
+    Input Event Source: `orcabus.fastqglue`
     Input Event DetailType: `SamplesheetMetadataUnion`
     Input Event status: `LibraryInSamplesheet`
 

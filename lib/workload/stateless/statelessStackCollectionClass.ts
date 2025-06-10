@@ -179,6 +179,30 @@ export class StatelessStackCollection {
     //   ...statelessConfiguration.fileManagerStackProps,
     // });
 
+    // this.bsshIcav2FastqCopyManagerStack = new BsshIcav2FastqCopyManagerStack(
+    //   scope,
+    //   'BsshIcav2FastqCopyManagerStack',
+    //   {
+    //     ...this.createTemplateProps(env, 'BsshIcav2FastqCopyManagerStack'),
+    //     ...statelessConfiguration.bsshIcav2FastqCopyManagerStackProps,
+    //   }
+    // );
+
+    // this.bclconvertInteropQcIcav2PipelineManagerStack =
+    //   new BclconvertInteropQcIcav2PipelineManagerStack(
+    //     scope,
+    //     'BclconvertInteropQcIcav2PipelineManagerStack',
+    //     {
+    //       ...this.createTemplateProps(env, 'BclconvertInteropQcIcav2PipelineManagerStack'),
+    //       ...statelessConfiguration.bclconvertInteropQcIcav2PipelineManagerStackProps,
+    //     }
+    //   );
+
+    //     this.fastqGlueStack = new FastqGlueStack(scope, 'FastqGlueStack', {
+    //   ...this.createTemplateProps(env, 'FastqGlueStack'),
+    //   ...statelessConfiguration.fastqGlueStackProps,
+    // });
+
     this.eventSchemaStack = new SchemaStack(scope, 'EventSchemaStack', {
       ...this.createTemplateProps(env, 'EventSchemaStack'),
       ...statelessConfiguration.eventSchemaStackProps,
@@ -188,25 +212,6 @@ export class StatelessStackCollection {
       ...this.createTemplateProps(env, 'DataSchemaStack'),
       ...statelessConfiguration.dataSchemaStackProps,
     });
-
-    this.bsshIcav2FastqCopyManagerStack = new BsshIcav2FastqCopyManagerStack(
-      scope,
-      'BsshIcav2FastqCopyManagerStack',
-      {
-        ...this.createTemplateProps(env, 'BsshIcav2FastqCopyManagerStack'),
-        ...statelessConfiguration.bsshIcav2FastqCopyManagerStackProps,
-      }
-    );
-
-    this.bclconvertInteropQcIcav2PipelineManagerStack =
-      new BclconvertInteropQcIcav2PipelineManagerStack(
-        scope,
-        'BclconvertInteropQcIcav2PipelineManagerStack',
-        {
-          ...this.createTemplateProps(env, 'BclconvertInteropQcIcav2PipelineManagerStack'),
-          ...statelessConfiguration.bclconvertInteropQcIcav2PipelineManagerStackProps,
-        }
-      );
 
     this.cttsov2Icav2PipelineManagerStack = new Cttsov2Icav2PipelineManagerStack(
       scope,
@@ -362,10 +367,6 @@ export class StatelessStackCollection {
     this.dataSharingStack = new DataSharingStack(scope, 'DataSharingStack', {
       ...this.createTemplateProps(env, 'DataSharingStack'),
       ...statelessConfiguration.dataSharingStackProps,
-    });
-    this.fastqGlueStack = new FastqGlueStack(scope, 'FastqGlueStack', {
-      ...this.createTemplateProps(env, 'FastqGlueStack'),
-      ...statelessConfiguration.fastqGlueStackProps,
     });
   }
 
