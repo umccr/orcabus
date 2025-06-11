@@ -291,15 +291,20 @@
                       "Next": "Add failed messaged as output (ingest error)"
                     }
                   ],
+                  "Next": "Wait 15 minutes after updating"
+                },
+                "Wait 15 minutes after updating": {
+                  "Type": "Wait",
+                  "Seconds": 900,
                   "End": true
                 },
                 "Add failed messaged as output (ingest error)": {
                   "Type": "Pass",
-                  "End": true,
                   "Output": {
                     "errorMessage": "{% 'Ingest ID update s3 uri ' & $s3UriIngestMapIter %}",
                     "hasError": true
-                  }
+                  },
+                  "End": true
                 }
               }
             },
