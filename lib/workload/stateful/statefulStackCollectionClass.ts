@@ -194,15 +194,15 @@ export class StatefulStackCollection {
       ...statefulConfiguration.icaEventPipeStackProps,
     });
 
-    this.bclconvertInteropQcIcav2PipelineTableStack =
-      new BclconvertInteropQcIcav2PipelineTableStack(
-        scope,
-        'BclconvertInteropQcIcav2PipelineTableStack',
-        {
-          ...this.createTemplateProps(env, 'BclconvertInteropQcIcav2PipelineTable'),
-          ...statefulConfiguration.bclconvertInteropQcIcav2PipelineTableStackProps,
-        }
-      );
+    // this.bclconvertInteropQcIcav2PipelineTableStack =
+    //   new BclconvertInteropQcIcav2PipelineTableStack(
+    //     scope,
+    //     'BclconvertInteropQcIcav2PipelineTableStack',
+    //     {
+    //       ...this.createTemplateProps(env, 'BclconvertInteropQcIcav2PipelineTable'),
+    //       ...statefulConfiguration.bclconvertInteropQcIcav2PipelineTableStackProps,
+    //     }
+    //   );
 
     this.cttsov2Icav2PipelineTableStack = new Cttsov2Icav2PipelineTable(
       scope,

@@ -5,9 +5,9 @@ import * as ssm from 'aws-cdk-lib/aws-ssm';
 import * as cdk from 'aws-cdk-lib';
 import * as secretsManager from 'aws-cdk-lib/aws-secretsmanager';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
-import { showerGlueHandlerConstruct } from './clag';
-import { BclconvertToBsshFastqCopyEventHandlerConstruct } from './elmer';
-import { BsshFastqCopyToBclconvertInteropQcConstruct } from './gorilla';
+// import { showerGlueHandlerConstruct } from './clag';
+// import { BclconvertToBsshFastqCopyEventHandlerConstruct } from './elmer';
+// import { BsshFastqCopyToBclconvertInteropQcConstruct } from './gorilla';
 import { Cttsov2GlueHandlerConstruct } from './jb-weld';
 import { WgtsQcGlueHandlerConstruct } from './kwik';
 import { TnGlueHandlerConstruct } from './loctite';
@@ -63,40 +63,40 @@ export class GlueConstruct extends Construct {
     /*
     Part A: Send 'showered' events if a new samplesheet arrives or new fastq list rows arrive
     */
-    const clag = new showerGlueHandlerConstruct(this, 'clag', {
-      /* Event Bus */
-      eventBusObj: props.eventBusObj,
-      /* Tables */
-      instrumentRunTableObj: props.instrumentRunTableObj,
-      /* Secrets */
-      icav2AccessTokenSecretObj: props.icav2AccessTokenSecretObj,
-    });
+    // const clag = new showerGlueHandlerConstruct(this, 'clag', {
+    //   /* Event Bus */
+    //   eventBusObj: props.eventBusObj,
+    //   /* Tables */
+    //   instrumentRunTableObj: props.instrumentRunTableObj,
+    //   /* Secrets */
+    //   icav2AccessTokenSecretObj: props.icav2AccessTokenSecretObj,
+    // });
 
     /*
     Part B: Copy the fastq list rows by connecting the bclconvert manager completion with the bsshfastqcopy manager
     */
-    const elmer = new BclconvertToBsshFastqCopyEventHandlerConstruct(this, 'elmer', {
-      /* Event Bus */
-      eventBusObj: props.eventBusObj,
-      /* SSM Parameters */
-      bsshOutputFastqCopyUriSsmParameterObj: props.bsshOutputFastqCopyOutputUriSsmParameterObj,
-      /* Secrets */
-      icav2AccessTokenSecretObj: props.icav2AccessTokenSecretObj,
-    });
+    // const elmer = new BclconvertToBsshFastqCopyEventHandlerConstruct(this, 'elmer', {
+    //   /* Event Bus */
+    //   eventBusObj: props.eventBusObj,
+    //   /* SSM Parameters */
+    //   bsshOutputFastqCopyUriSsmParameterObj: props.bsshOutputFastqCopyOutputUriSsmParameterObj,
+    //   /* Secrets */
+    //   icav2AccessTokenSecretObj: props.icav2AccessTokenSecretObj,
+    // });
 
     /*
     Part C: Connect the bclconvert interop qc
     */
-    const gorilla = new BsshFastqCopyToBclconvertInteropQcConstruct(this, 'gorilla', {
-      /* Event Objects */
-      eventBusObj: props.eventBusObj,
-      /* SSM Parameter Objects */
-      analysisLogsUriSsmParameterObj: props.analysisLogsUriSsmParameterObj,
-      analysisOutputUriSsmParameterObj: props.analysisOutputUriSsmParameterObj,
-      icav2ProjectIdSsmParameterObj: props.icav2ProjectIdSsmParameterObj,
-      /* Secrets */
-      icav2AccessTokenSecretObj: props.icav2AccessTokenSecretObj,
-    });
+    // const gorilla = new BsshFastqCopyToBclconvertInteropQcConstruct(this, 'gorilla', {
+    //   /* Event Objects */
+    //   eventBusObj: props.eventBusObj,
+    //   /* SSM Parameter Objects */
+    //   analysisLogsUriSsmParameterObj: props.analysisLogsUriSsmParameterObj,
+    //   analysisOutputUriSsmParameterObj: props.analysisOutputUriSsmParameterObj,
+    //   icav2ProjectIdSsmParameterObj: props.icav2ProjectIdSsmParameterObj,
+    //   /* Secrets */
+    //   icav2AccessTokenSecretObj: props.icav2AccessTokenSecretObj,
+    // });
 
     /*
     Part D: Plumber-up the oncoanalyser services

@@ -8,7 +8,7 @@ import * as eventsTargets from 'aws-cdk-lib/aws-events-targets';
 /*
 Part 2
 
-Input Event Source: `orcabus.instrumentrunmanager`
+Input Event Source: `orcabus.fastqglue`
 Input Event DetailType: `SamplesheetMetadataUnion`
 Input Event status: `LibraryInSamplesheet`
 
@@ -29,7 +29,7 @@ export class Cttsov2InitialiseLibraryAndFastqListRowConstruct extends Construct 
       bclconvertDataRow: 'bclconvert_data',
       fastqListRow: 'fastq_list_row',
     },
-    triggerSource: 'orcabus.instrumentrunmanager',
+    triggerSource: 'orcabus.fastqglue',
     triggerStatus: 'LibraryInSamplesheet',
     triggerDetailType: 'SamplesheetMetadataUnion',
     triggerSampleType: 'ctdna',

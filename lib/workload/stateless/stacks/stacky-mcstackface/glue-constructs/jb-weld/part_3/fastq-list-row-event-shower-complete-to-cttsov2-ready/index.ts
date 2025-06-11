@@ -17,8 +17,8 @@ import { NagSuppressions } from 'cdk-nag';
 /*
 Part 4
 
-Input Event Source: `orcabus.instrumentrunmanager`
-Input Event DetailType: `FastqListRowStateChange`
+Input Event Source: `orcabus.fastqglue`
+Input Event DetailType: `FastqListRowShowerStateChange`
 Input Event status: `FastqListRowEventShowerComplete`
 
 Output Event source: `orcabus.cttsov2inputeventglue`
@@ -57,7 +57,7 @@ export class Cttsov2FastqListRowShowerCompleteToWorkflowDraftConstruct extends C
     },
     portalRunPartitionName: 'portal_run', // For workflow table
     /* Input Event Settings */
-    triggerSource: 'orcabus.instrumentrunmanager',
+    triggerSource: 'orcabus.fastqglue',
     triggerStatus: 'FastqListRowEventShowerComplete',
     triggerDetailType: 'FastqListRowShowerStateChange',
     /* Output Event Settings */

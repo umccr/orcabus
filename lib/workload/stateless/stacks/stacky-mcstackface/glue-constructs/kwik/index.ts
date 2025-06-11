@@ -36,7 +36,7 @@ export class WgtsQcGlueHandlerConstruct extends NestedStack {
     /*
     Part 1
 
-    Input Event Source: `orcabus.instrumentrunmanager`
+    Input Event Source: `orcabus.fastqglue`
     Input Event DetailType: `SamplesheetMetadataUnion`
     Input Event status: `LibraryInSamplesheet`
 
@@ -55,8 +55,8 @@ export class WgtsQcGlueHandlerConstruct extends NestedStack {
     /*
     Part 2
 
-    Input Event Source: `orcabus.instrumentrunmanager`
-    Input Event DetailType: `FastqListRowStateChange`
+    Input Event Source: `orcabus.fastqglue`
+    Input Event DetailType: `StackyFastqListRowStateChange`
     Input Event status: `newFastqListRow`
 
     * Populate the fastq list row attributes for the rgid for this workflow
@@ -73,8 +73,8 @@ export class WgtsQcGlueHandlerConstruct extends NestedStack {
     /*
     Part 3
 
-    Input Event Source: `orcabus.instrumentrunmanager`
-    Input Event DetailType: `FastqListRowStateChange`
+    Input Event Source: `orcabus.fastqglue`
+    Input Event DetailType: `FastqListRowShowerStateChange`
     Input Event status: `FastqListRowEventShowerComplete`
 
     Output Event source: `orcabus.wgtsqcinputeventglue`
@@ -115,7 +115,7 @@ export class WgtsQcGlueHandlerConstruct extends NestedStack {
     Input Event WorkflowName: `wgts_qc`
 
     Output Event Source: `orcabus.wgtsqcinputeventglue`
-    Output Event DetailType: `FastqListRowStateChange`
+    Output Event DetailType: `StackyFastqListRowStateChange`
     Output Event status: `QcComplete`
 
     * Subscribe to workflow run state change events, map the fastq list row id from the portal run id in the data base
@@ -135,7 +135,7 @@ export class WgtsQcGlueHandlerConstruct extends NestedStack {
     Part 5
 
     Input Event Source: `orcabus.wgtsqcinputeventglue`
-    Input Event DetailType: `FastqListRowStateChange`
+    Input Event DetailType: `StackyFastqListRowStateChange`
     Input Event status: `QcComplete`
 
     Output Event Source: `orcabus.wgtsqcinputeventglue`

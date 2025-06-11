@@ -33,7 +33,7 @@ export class TnGlueHandlerConstruct extends NestedStack {
     /*
         Part 1
 
-        Input Event Source: `orcabus.instrumentrunmanager`
+        Input Event Source: `orcabus.fastqglue`
         Input Event DetailType: `SamplesheetMetadataUnion`
         Input Event status: `LibraryInSamplesheet`
 
@@ -51,8 +51,8 @@ export class TnGlueHandlerConstruct extends NestedStack {
     /*
         Part 2
 
-        Input Event Source: `orcabus.instrumentrunmanager`
-        Input Event DetailType: `FastqListRowStateChange`
+        Input Event Source: `orcabus.fastqglue`
+        Input Event DetailType: `StackyFastqListRowStateChange`
         Input Event status: `newFastqListRow`
 
         * Populate the fastq list row attributes for the rgid for this workflow

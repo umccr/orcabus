@@ -8,8 +8,8 @@ import * as eventsTargets from 'aws-cdk-lib/aws-events-targets';
 /*
 Part 3
 
-Input Event Source: `orcabus.instrumentrunmanager`
-Input Event DetailType: `FastqListRowStateChange`
+Input Event Source: `orcabus.fastqglue`
+Input Event DetailType: `StackyFastqListRowStateChange`
 Input Event status: `newFastqListRow`
 
 * Populate the fastq list row attributes for the rgid for this workflow
@@ -24,9 +24,9 @@ export class TnPopulateFastqListRowConstruct extends Construct {
   public readonly TnPopulateFastqListRowDbRowMap = {
     prefix: 'loctite-populate-fqlr-row',
     tablePartition: 'fastq_list_row',
-    triggerSource: 'orcabus.instrumentrunmanager',
+    triggerSource: 'orcabus.fastqglue',
     triggerStatus: 'newFastqListRow',
-    triggerDetailType: 'FastqListRowStateChange',
+    triggerDetailType: 'StackyFastqListRowStateChange',
   };
 
   constructor(scope: Construct, id: string, props: TnPopulateFastqListRowDbRowConstructProps) {

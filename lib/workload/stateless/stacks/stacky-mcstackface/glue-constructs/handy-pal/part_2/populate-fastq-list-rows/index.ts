@@ -20,9 +20,9 @@ export class OncoanalyserPopulateFastqListRowConstruct extends Construct {
   public readonly OncoanalyserPopulateFastqListRowRunDbRowMap = {
     prefix: 'handypal-populate-fqlr-row',
     tablePartition: 'fastq_list_row',
-    triggerSource: 'orcabus.instrumentrunmanager',
+    triggerSource: 'orcabus.fastqglue',
     triggerStatus: 'newFastqListRow',
-    triggerDetailType: 'FastqListRowStateChange',
+    triggerDetailType: 'StackyFastqListRowStateChange',
   };
 
   constructor(

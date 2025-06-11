@@ -19,7 +19,7 @@ Input Event status: `succeeded`
 Input Event WorkflowName: `wgts_qc`
 
 Output Event Source: `orcabus.wgtsqcinputeventglue`
-Output Event DetailType: `FastqListRowStateChange`
+Output Event DetailType: `StackyFastqListRowStateChange`
 Output Event status: `QcComplete`
 
 * Subscribe to workflow run state change events, map the fastq list row id from the portal run id in the database
@@ -42,7 +42,7 @@ export class FastqListRowQcCompleteConstruct extends Construct {
     triggerDetailType: 'WorkflowRunStateChange',
     triggerWorkflowName: 'wgts-qc',
     outputSource: 'orcabus.wgtsqcinputeventglue',
-    outputDetailType: 'FastqListRowStateChange',
+    outputDetailType: 'StackyFastqListRowStateChange',
     outputStatus: 'QC_COMPLETE',
     payloadVersion: '2024.05.24',
   };
