@@ -214,7 +214,7 @@
                           "S": "{% $dynamoDbIdTypeKeys.fastqSetId %}"
                         }
                       },
-                      "UpdateExpression": "SET task_token_set = task_token_set - :removed_task_token",
+                      "UpdateExpression": "DELETE task_token_set :removed_task_token",
                       "ExpressionAttributeValues": {
                         ":removed_task_token": {
                           "SS": ["{% $taskTokenMapIter %}"]
