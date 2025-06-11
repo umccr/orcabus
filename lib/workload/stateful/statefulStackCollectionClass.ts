@@ -11,7 +11,6 @@ import {
   BclConvertTableStackProps,
 } from './stacks/bclconvert-dynamo-db/deploy/stack';
 import {
-  BclconvertInteropQcIcav2PipelineTableStack,
   BclconvertInteropQcIcav2PipelineTableStackProps,
 } from './stacks/bclconvert-interop-qc-pipeline-dynamo-db/deploy/stack';
 import {
@@ -77,7 +76,6 @@ import {
   FastqSyncManagerTableStackProps,
 } from './stacks/fastq-sync-dynamodb/deploy/stack';
 import {
-  Icav2DataCopyManagerTable,
   Icav2DataCopyManagerTableStackProps,
 } from './stacks/icav2-data-copy-manager-dynamo-db/deploy';
 import {
