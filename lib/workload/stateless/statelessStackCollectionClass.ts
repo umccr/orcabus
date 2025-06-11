@@ -2,11 +2,11 @@ import { Construct } from 'constructs';
 import { Stack, Environment, StackProps } from 'aws-cdk-lib';
 import { FilemanagerProps } from './stacks/filemanager/deploy/stack';
 import {
-  BsshIcav2FastqCopyManagerStack,
+  // BsshIcav2FastqCopyManagerStack,
   BsshIcav2FastqCopyManagerStackProps,
 } from './stacks/bssh-icav2-fastq-copy-manager/deploy/stack';
 import {
-  BclconvertInteropQcIcav2PipelineManagerStack,
+  // BclconvertInteropQcIcav2PipelineManagerStack,
   BclconvertInteropQcIcav2PipelineManagerStackProps,
 } from './stacks/bclconvert-interop-qc-pipeline-manager/deploy/stack';
 import {
@@ -72,14 +72,17 @@ import {
 } from './stacks/fastq-unarchiving/deploy';
 import { FastqSyncManagerStack, FastqSyncManagerStackProps } from './stacks/fastq-sync/deploy';
 import {
-  Icav2DataCopyManagerStack,
+  // Icav2DataCopyManagerStack,
   Icav2DataCopyManagerStackProps,
 } from './stacks/icav2-data-copy-manager/deploy';
 import {
   DataSharingStack,
   DataSharingStackProps,
 } from './stacks/data-sharing-manager/deploy/stack';
-import { FastqGlueStack, FastqGlueStackProps } from './stacks/fastq-glue/deploy';
+import {
+  // FastqGlueStack,
+  FastqGlueStackProps,
+} from './stacks/fastq-glue/deploy';
 
 export interface StatelessStackCollectionProps {
   fileManagerStackProps: FilemanagerProps;

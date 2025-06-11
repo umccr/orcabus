@@ -11,7 +11,7 @@ import {
   BclConvertTableStackProps,
 } from './stacks/bclconvert-dynamo-db/deploy/stack';
 import {
-  BclconvertInteropQcIcav2PipelineTableStack,
+  // BclconvertInteropQcIcav2PipelineTableStack,
   BclconvertInteropQcIcav2PipelineTableStackProps,
 } from './stacks/bclconvert-interop-qc-pipeline-dynamo-db/deploy/stack';
 import {
