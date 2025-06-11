@@ -2,11 +2,9 @@ import { Construct } from 'constructs';
 import { Stack, Environment, StackProps } from 'aws-cdk-lib';
 import { FilemanagerProps } from './stacks/filemanager/deploy/stack';
 import {
-  BsshIcav2FastqCopyManagerStack,
   BsshIcav2FastqCopyManagerStackProps,
 } from './stacks/bssh-icav2-fastq-copy-manager/deploy/stack';
 import {
-  BclconvertInteropQcIcav2PipelineManagerStack,
   BclconvertInteropQcIcav2PipelineManagerStackProps,
 } from './stacks/bclconvert-interop-qc-pipeline-manager/deploy/stack';
 import {
@@ -44,7 +42,7 @@ import {
   OraCompressionIcav2PipelineManagerStackProps,
 } from './stacks/ora-compression-manager/deploy';
 
-import { FMAnnotator, FMAnnotatorProps } from './stacks/fmannotator/deploy/stack';
+import { FMAnnotatorProps } from './stacks/fmannotator/deploy/stack';
 import {
   PieriandxPipelineManagerStack,
   PierianDxPipelineManagerStackProps,
@@ -63,7 +61,7 @@ import {
 } from './stacks/ora-decompression-manager/deploy';
 import { PgDDStack, PgDDStackProps } from './stacks/pg-dd/deploy/stack';
 import { DataMigrateStack, DataMigrateStackProps } from './stacks/data-migrate/deploy/stack';
-import { HtsgetStack, HtsgetStackProps } from './stacks/htsget/stack';
+import { HtsgetStackProps } from './stacks/htsget/stack';
 import { SampleSheetCheckerStackProps } from './stacks/sample-sheet-check/stack';
 import { FastqManagerStack, FastqManagerStackProps } from './stacks/fastq-manager/deploy/stack';
 import {
@@ -72,14 +70,13 @@ import {
 } from './stacks/fastq-unarchiving/deploy';
 import { FastqSyncManagerStack, FastqSyncManagerStackProps } from './stacks/fastq-sync/deploy';
 import {
-  Icav2DataCopyManagerStack,
   Icav2DataCopyManagerStackProps,
 } from './stacks/icav2-data-copy-manager/deploy';
 import {
   DataSharingStack,
   DataSharingStackProps,
 } from './stacks/data-sharing-manager/deploy/stack';
-import { FastqGlueStack, FastqGlueStackProps } from './stacks/fastq-glue/deploy';
+import { FastqGlueStackProps } from './stacks/fastq-glue/deploy';
 
 export interface StatelessStackCollectionProps {
   fileManagerStackProps: FilemanagerProps;
@@ -203,6 +200,16 @@ export class StatelessStackCollection {
     //   ...statelessConfiguration.fastqGlueStackProps,
     // });
 
+    // this.fmAnnotator = new FMAnnotator(scope, 'FMAnnotatorStack', {
+    //   ...this.createTemplateProps(env, 'FMAnnotatorStack'),
+    //   ...statelessConfiguration.fmAnnotatorProps,
+    // });
+
+    // this.htsgetStack = new HtsgetStack(scope, 'HtsgetStack', {
+    //   ...this.createTemplateProps(env, 'HtsgetStack'),
+    //   ...statelessConfiguration.htsgetProps,
+    // });
+
     this.eventSchemaStack = new SchemaStack(scope, 'EventSchemaStack', {
       ...this.createTemplateProps(env, 'EventSchemaStack'),
       ...statelessConfiguration.eventSchemaStackProps,
@@ -322,17 +329,9 @@ export class StatelessStackCollection {
       ...statelessConfiguration.stackyMcStackFaceProps,
     });
 
-    this.fmAnnotator = new FMAnnotator(scope, 'FMAnnotatorStack', {
-      ...this.createTemplateProps(env, 'FMAnnotatorStack'),
-      ...statelessConfiguration.fmAnnotatorProps,
-    });
     this.dataMigrate = new DataMigrateStack(scope, 'DataMigrateStack', {
       ...this.createTemplateProps(env, 'DataMigrateStack'),
       ...statelessConfiguration.dataMigrateProps,
-    });
-    this.htsgetStack = new HtsgetStack(scope, 'HtsgetStack', {
-      ...this.createTemplateProps(env, 'HtsgetStack'),
-      ...statelessConfiguration.htsgetProps,
     });
 
     if (statelessConfiguration.pgDDProps) {
