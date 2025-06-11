@@ -121,7 +121,9 @@ export class BclConvertManagerStack extends Stack {
             projectId: [{ exists: true }],
             payload: {
               pipeline: {
-                code: [{ prefix: 'BclConvert' }],
+                code: {
+                  prefix: ['BclConvert', 'BCL_Convert'],
+                },
               },
             },
           },
