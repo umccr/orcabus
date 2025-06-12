@@ -20,14 +20,14 @@ from wrapica.project_data import (
 )
 
 from wrapica.libica_models import (
-    ProjectData
+    ProjectData, AnalysisInput
 )
 from wrapica.project_data import (
     find_project_data_bulk,
     get_file_by_file_name_from_project_data_list, get_project_data_obj_by_id,
 )
 from wrapica.project_analysis import (
-    get_analysis_output_object_from_analysis_output_code
+    get_analysis_output_object_from_analysis_output_code, get_analysis_input_object_from_analysis_input_code
 )
 from wrapica.enums import DataType
 
@@ -58,7 +58,25 @@ def get_bclconvert_outputs_from_analysis_id(
     )
 
 
-def get_basespace_run_id_from_bssh_json_output(bssh_json_output: Dict) -> int:
+def get_run_folder_obj_from_analysis_id(project_id: str, analysis_id: str) -> ProjectData:
+    """
+    Query the outputs object from analysis id
+    """
+
+    run_folder_input: AnalysisInput = get_analysis_input_object_from_analysis_input_code(
+        project_id,
+        analysis_id,
+        "run_folder"
+    )
+
+    # Get the folder ID
+    run_folder_id = run_folder_input.analysis_data[0].data_id
+
+    # Return all files recursively
+    return get_project_data_obj_by_id(project_id, run_folder_id)
+
+
+def get_basespace_run_id_from_run_folder_name(run_folder_name: str) -> int:
     """
     From
     {
@@ -77,11 +95,7 @@ def get_basespace_run_id_from_bssh_json_output(bssh_json_output: Dict) -> int:
     :return:
     """
     return int(
-        bssh_json_output
-        .get("Projects")
-        .get("OutputProject")
-        .get("Name")
-        .split("_")[-1]
+        run_folder_name.rsplit("_", 1)[-1]  # Split by underscore and take the last part
     )
 
 
@@ -173,9 +187,18 @@ def collect_analysis_objects(project_id: str, analysis_id: str) -> Dict:
         )
     )
 
-    # Get the basespace run id from the bssh output dict
-    logger.info("Collecting basespace run id")
-    basespace_run_id = get_basespace_run_id_from_bssh_json_output(bssh_json_dict)
+    # Get the analysis input run folder
+    run_folder_object = get_run_folder_obj_from_analysis_id(
+        project_id=project_id,
+        analysis_id=analysis_id
+    )
+
+    # Get the basespace run id from the run folder name
+    logger.info("Collecting basespace run id from run folder name")
+    basespace_run_id = get_basespace_run_id_from_run_folder_name(
+        run_folder_name=run_folder_object.data.details.name
+    )
+
 
     # Get run info (to collect the run id)
     logger.info("Collecting the run info xml file")

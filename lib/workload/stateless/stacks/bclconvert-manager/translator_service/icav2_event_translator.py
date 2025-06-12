@@ -326,6 +326,16 @@ def generate_new_portal_run(analysis_id: str) -> str:
 
 
 def parse_event_code(event_code):
+    """
+    FIXME - we cannot assume that the event code will always be in the format 'EventName vMajor_Minor_Patch'
+    We should get the BCLConvert version from the samplesheet instead
+    :param event_code:
+    :return:
+    """
+
+    if event_code == 'BCL_Convert_4-4-4_ORA_2-7-0_Default_Large':
+        return "BCLConvert", "4.4.4"
+
     # Split the event code by space to separate the event name and version string
     parts = event_code.split(" ")
     if len(parts) != 2:
