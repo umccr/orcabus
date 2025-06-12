@@ -77,7 +77,7 @@ import {
   FastqSyncManagerTableStackProps,
 } from './stacks/fastq-sync-dynamodb/deploy/stack';
 import {
-  Icav2DataCopyManagerTable,
+  // Icav2DataCopyManagerTable,
   Icav2DataCopyManagerTableStackProps,
 } from './stacks/icav2-data-copy-manager-dynamo-db/deploy';
 import {
