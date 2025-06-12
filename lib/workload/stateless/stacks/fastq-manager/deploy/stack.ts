@@ -70,6 +70,7 @@ import {
   sharedLambdaOutputs,
   sharedLambdaProps,
 } from './interfaces';
+import { ManagedPolicy } from 'aws-cdk-lib/aws-iam';
 
 export type FastqManagerStackProps = FastqManagerStackConfig & cdk.StackProps;
 
@@ -315,7 +316,7 @@ export class FastqManagerStack extends Stack {
 
     16384 (16 vCPU) - Available memory values: Between 32768 (32 GB) and 122880 (120 GB) in increments of 8192 (8 GB)
     */
-    return new ecs.FargateTaskDefinition(this, taskName, {
+    const taskDefinition = new ecs.FargateTaskDefinition(this, taskName, {
       runtimePlatform: {
         cpuArchitecture: ecs.CpuArchitecture.ARM64,
       },
@@ -324,6 +325,15 @@ export class FastqManagerStack extends Stack {
       // Multiple memory by 2^20 to get the value in MiB
       memoryLimitMiB: memoryLimitGiB * 1024,
     });
+
+    // Allow the task definition role ecr access to the guardduty agent
+    // Which is in another account - 005257825471.dkr.ecr.ap-southeast-2.amazonaws.com/aws-guardduty-agent-fargate
+    // https://docs.aws.amazon.com/guardduty/latest/ug/prereq-runtime-monitoring-ecs-support.html#before-enable-runtime-monitoring-ecs
+    taskDefinition.taskRole.addManagedPolicy(
+      ManagedPolicy.fromAwsManagedPolicyName('service-role/AmazonECSTaskExecutionRolePolicy')
+    );
+
+    return taskDefinition;
   }
 
   private build_shared_lambda_functions_in_sfns(props: sharedLambdaProps): sharedLambdaOutputs {
