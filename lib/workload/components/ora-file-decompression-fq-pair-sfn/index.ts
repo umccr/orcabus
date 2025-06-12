@@ -12,6 +12,7 @@ import * as lambda from 'aws-cdk-lib/aws-lambda';
 import { RetentionDays } from 'aws-cdk-lib/aws-logs';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as cdk from 'aws-cdk-lib';
+import { ManagedPolicy } from 'aws-cdk-lib/aws-iam';
 
 export interface OraDecompressionConstructProps {
   sfnPrefix: string;
@@ -45,6 +46,13 @@ export class OraDecompressionConstruct extends Construct {
       //    Between 16384 (16 GB) and 61440 (60 GB) in increments of 4096 (4 GB)
       memoryLimitMiB: 16384,
     });
+
+    // Add the AmazonECSTaskExecutionRolePolicy to the task definition
+    // This allows the guard-duty agent to run properly
+    taskDefinition.taskRole.addManagedPolicy(
+      ManagedPolicy.fromAwsManagedPolicyName('service-role/AmazonECSTaskExecutionRolePolicy')
+    );
+
     // We also need a security group context to run the task in
     const securityGroup = new ec2.SecurityGroup(this, 'SecurityGroup', {
       vpc,
