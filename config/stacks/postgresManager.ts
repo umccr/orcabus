@@ -30,7 +30,7 @@ export const getPostgresManagerStackProps = (): PostgresManagerStackProps => {
       },
       {
         name: 'metadata_manager',
-        authType: DbAuthType.USERNAME_PASSWORD,
+        authType: DbAuthType.RDS_IAM,
       },
       { name: FILEMANAGER_SERVICE_NAME, authType: DbAuthType.RDS_IAM },
     ],
