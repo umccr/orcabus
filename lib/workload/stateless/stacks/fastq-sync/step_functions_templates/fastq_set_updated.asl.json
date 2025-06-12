@@ -130,7 +130,13 @@
               "TaskToken": "{% $taskTokenMapIter %}"
             },
             "Resource": "arn:aws:states:::aws-sdk:sfn:sendTaskSuccess",
-            "Next": "Clean up"
+            "Next": "Clean up",
+            "Catch": [
+              {
+                "ErrorEquals": ["Sfn.TaskTimedOutException"],
+                "Next": "Clean up"
+              }
+            ]
           },
           "Clean up": {
             "Type": "Parallel",
