@@ -1,6 +1,6 @@
 import { Construct } from 'constructs';
 import { Stack, Environment, StackProps } from 'aws-cdk-lib';
-import { TokenServiceStackProps, TokenServiceStack } from './stacks/token-service/deploy/stack';
+import { TokenServiceStackProps } from './stacks/token-service/deploy/stack';
 import { IcaEventPipeStack, IcaEventPipeStackProps } from './stacks/ica-event-pipe/stack';
 import {
   Cttsov2Icav2PipelineTable,
@@ -10,15 +10,15 @@ import {
   BclConvertTable,
   BclConvertTableStackProps,
 } from './stacks/bclconvert-dynamo-db/deploy/stack';
-import { BclconvertInteropQcIcav2PipelineTableStackProps } from './stacks/bclconvert-interop-qc-pipeline-dynamo-db/deploy/stack';
+import {
+  BclconvertInteropQcIcav2PipelineTableStack,
+  BclconvertInteropQcIcav2PipelineTableStackProps,
+} from './stacks/bclconvert-interop-qc-pipeline-dynamo-db/deploy/stack';
 import {
   StackyStatefulTablesStack,
   StackyStatefulTablesStackProps,
 } from './stacks/stacky-mcstackface-dynamodb';
-import {
-  PostgresManagerStack,
-  PostgresManagerStackProps,
-} from './stacks/postgres-manager/deploy/stack';
+import { PostgresManagerStackProps } from './stacks/postgres-manager/deploy/stack';
 import { DataBucketStack, DataBucketStackProps } from './stacks/data/stack';
 import {
   WgtsQcIcav2PipelineTable,
@@ -44,10 +44,7 @@ import {
   PierianDxPipelineTable,
   PierianDxPipelineTableStackProps,
 } from './stacks/pieriandx-pipeline-dynamo-db/deploy';
-import {
-  AuthorizationManagerStack,
-  AuthorizationManagerStackProps,
-} from './stacks/authorization-manager/stack';
+import { AuthorizationManagerStackProps } from './stacks/authorization-manager/stack';
 import {
   OncoanalyserNfPipelineTable,
   OncoanalyserNfPipelineTableStackProps,
@@ -73,7 +70,10 @@ import {
   FastqSyncManagerTable,
   FastqSyncManagerTableStackProps,
 } from './stacks/fastq-sync-dynamodb/deploy/stack';
-import { Icav2DataCopyManagerTableStackProps } from './stacks/icav2-data-copy-manager-dynamo-db/deploy';
+import {
+  Icav2DataCopyManagerTable,
+  Icav2DataCopyManagerTableStackProps,
+} from './stacks/icav2-data-copy-manager-dynamo-db/deploy';
 import {
   DataSharingS3AndTableStack,
   DataSharingS3AndTableStackProps,
@@ -156,6 +156,25 @@ export class StatefulStackCollection {
     //   ...statefulConfiguration.sharedStackProps,
     // });
 
+    // this.authorizationManagerStack = new AuthorizationManagerStack(
+    //   scope,
+    //   'AuthorizationManagerStack',
+    //   {
+    //     ...this.createTemplateProps(env, 'AuthorizationManagerStack'),
+    //     ...statefulConfiguration.authorizationManagerStackProps,
+    //   }
+    // );
+
+    // this.tokenServiceStack = new TokenServiceStack(scope, 'TokenServiceStack', {
+    //   ...this.createTemplateProps(env, 'TokenServiceStack'),
+    //   ...statefulConfiguration.tokenServiceStackProps,
+    // });
+
+    // this.postgresManagerStack = new PostgresManagerStack(scope, 'PostgresManagerStack', {
+    //   ...this.createTemplateProps(env, 'PostgresManagerStack'),
+    //   ...statefulConfiguration.postgresManagerStackProps,
+    // });
+
     // Currently this only needs to be deployed if bucketName exist as props
     if (statefulConfiguration.dataBucketStackProps.bucketName) {
       this.dataBucketStack = new DataBucketStack(scope, 'DataBucketStack', {
@@ -163,25 +182,6 @@ export class StatefulStackCollection {
         ...statefulConfiguration.dataBucketStackProps,
       });
     }
-
-    this.authorizationManagerStack = new AuthorizationManagerStack(
-      scope,
-      'AuthorizationManagerStack',
-      {
-        ...this.createTemplateProps(env, 'AuthorizationManagerStack'),
-        ...statefulConfiguration.authorizationManagerStackProps,
-      }
-    );
-
-    this.postgresManagerStack = new PostgresManagerStack(scope, 'PostgresManagerStack', {
-      ...this.createTemplateProps(env, 'PostgresManagerStack'),
-      ...statefulConfiguration.postgresManagerStackProps,
-    });
-
-    this.tokenServiceStack = new TokenServiceStack(scope, 'TokenServiceStack', {
-      ...this.createTemplateProps(env, 'TokenServiceStack'),
-      ...statefulConfiguration.tokenServiceStackProps,
-    });
 
     this.icaEventPipeStack = new IcaEventPipeStack(scope, 'IcaEventPipeStack', {
       ...this.createTemplateProps(env, 'IcaEventPipeStack'),
