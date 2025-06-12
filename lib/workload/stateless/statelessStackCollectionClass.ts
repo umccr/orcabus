@@ -1,12 +1,8 @@
 import { Construct } from 'constructs';
 import { Stack, Environment, StackProps } from 'aws-cdk-lib';
 import { FilemanagerProps } from './stacks/filemanager/deploy/stack';
-import {
-  BsshIcav2FastqCopyManagerStackProps,
-} from './stacks/bssh-icav2-fastq-copy-manager/deploy/stack';
-import {
-  BclconvertInteropQcIcav2PipelineManagerStackProps,
-} from './stacks/bclconvert-interop-qc-pipeline-manager/deploy/stack';
+import { BsshIcav2FastqCopyManagerStackProps } from './stacks/bssh-icav2-fastq-copy-manager/deploy/stack';
+import { BclconvertInteropQcIcav2PipelineManagerStackProps } from './stacks/bclconvert-interop-qc-pipeline-manager/deploy/stack';
 import {
   Cttsov2Icav2PipelineManagerStackProps,
   Cttsov2Icav2PipelineManagerStack,
@@ -69,9 +65,7 @@ import {
   FastqUnarchivingManagerStackProps,
 } from './stacks/fastq-unarchiving/deploy';
 import { FastqSyncManagerStack, FastqSyncManagerStackProps } from './stacks/fastq-sync/deploy';
-import {
-  Icav2DataCopyManagerStackProps,
-} from './stacks/icav2-data-copy-manager/deploy';
+import { Icav2DataCopyManagerStackProps } from './stacks/icav2-data-copy-manager/deploy';
 import {
   DataSharingStack,
   DataSharingStackProps,
