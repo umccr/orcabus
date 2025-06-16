@@ -252,7 +252,7 @@
       },
       "Next": "Get fastq list row ids from fastq set id",
       "Assign": {
-        "requirementsSet": "{% /* Flatten and get distinct list of requirements  -  https://try.jsonata.org/DJQepsa_K */\n(\n  $appendRequirements := function($i, $j){$distinct($append($i, $j))};\n  $reduce(\n    [\n      $map($states.result, function($resultIter){$resultIter.requirementsSetMapIter})      \n    ],\n    $appendRequirements\n  )\n)\n\n %}"
+        "requirementsSet": "{% /* https://try.jsonata.org/HKzKoBGs4 */\n[(\n  /* Collect the requirement maps set */\n  $states.result.(requirementsSet)\n  ~>\n  /* Select distinct outputs */\n  $distinct\n)]\n %}"
       }
     },
     "Get fastq list row ids from fastq set id": {
