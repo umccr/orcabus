@@ -349,6 +349,8 @@ export class FastqManagerStack extends Stack {
       ],
       true
     );
+
+    return taskDefinition;
   }
 
   private build_shared_lambda_functions_in_sfns(props: sharedLambdaProps): sharedLambdaOutputs {
