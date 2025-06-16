@@ -327,15 +327,7 @@ export class FastqManagerStack extends Stack {
       ],
     });
 
-    NagSuppressions.addResourceSuppressions(taskExecutionRole, [
-      {
-        id: 'AwsSolutions-IAM5',
-        reason:
-          'The task execution role needs to access the GuardDuty agent in another account, which requires a wildcard resource.',
-      },
-    ]);
-
-    return new ecs.FargateTaskDefinition(this, taskName, {
+    const taskDefinition = new ecs.FargateTaskDefinition(this, taskName, {
       runtimePlatform: {
         cpuArchitecture: ecs.CpuArchitecture.ARM64,
       },
@@ -345,6 +337,18 @@ export class FastqManagerStack extends Stack {
       memoryLimitMiB: memoryLimitGiB * 1024,
       executionRole: taskExecutionRole,
     });
+
+    NagSuppressions.addResourceSuppressions(
+      [taskExecutionRole, taskDefinition],
+      [
+        {
+          id: 'AwsSolutions-IAM5',
+          reason:
+            'The task execution role needs to access the GuardDuty agent in another account, which requires a wildcard resource.',
+        },
+      ],
+      true
+    );
   }
 
   private build_shared_lambda_functions_in_sfns(props: sharedLambdaProps): sharedLambdaOutputs {
