@@ -338,7 +338,7 @@ External resources required by the wgtsqc Stack
 */
 
 // Deployed under dev/stg/prod
-export const wgtsQcIcav2PipelineIdSSMParameterPath = '/icav2/umccr-prod/wgts_qc_4.2.4_pipeline_id'; // 03689516-b7f8-4dca-bba9-8405b85fae45
+export const wgtsQcIcav2PipelineIdSSMParameterPath = '/icav2/umccr-prod/wgts_qc_4.2.4_pipeline_id'; // ca2b75a0-76c5-417f-a357-9a1a7b3fc796
 
 export const wgtsQcIcav2PipelineWorkflowType = 'wgts-qc';
 export const wgtsQcIcav2PipelineWorkflowTypeVersion = '4.2.4';

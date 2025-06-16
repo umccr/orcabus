@@ -185,6 +185,10 @@
           "reference_tar": {
             "class": "File",
             "location.$": "$.configure_inputs_step.reference_uri"
+          },
+          "ora_reference_tar": {
+            "class": "File",
+            "location": "s3://pipeline-prod-cache-503977275616-ap-southeast-2/byob-icav2/reference-data/dragen-ora/v2/ora_reference_v2.tar.gz"
           }
         }
       },
