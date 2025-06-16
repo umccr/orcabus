@@ -327,6 +327,14 @@ export class FastqManagerStack extends Stack {
       ],
     });
 
+    NagSuppressions.addResourceSuppressions(taskExecutionRole, [
+      {
+        id: 'AwsSolutions-IAM5',
+        reason:
+          'The task execution role needs to access the GuardDuty agent in another account, which requires a wildcard resource.',
+      },
+    ]);
+
     return new ecs.FargateTaskDefinition(this, taskName, {
       runtimePlatform: {
         cpuArchitecture: ecs.CpuArchitecture.ARM64,
