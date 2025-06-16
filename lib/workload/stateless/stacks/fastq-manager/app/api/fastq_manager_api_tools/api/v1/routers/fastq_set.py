@@ -902,7 +902,7 @@ async def merge_fastq_sets(fastq_set_ids: MergePatch = Depends()) -> FastqSetRes
 
 # GET /fastqSet/{fastqSetId}:validateNtsmInternal
 @router.get(
-    "/fastqSet/{fastq_set_id}:validateNtsmInternal",
+    "/{fastq_set_id}:validateNtsmInternal",
     tags=["fastqset ntsm"],
     description="Validate all fastq list rows in the ntsm match, run all-by-all on the ntsms in the fastq set"
 )
@@ -939,13 +939,13 @@ async def validate_ntsm_internal(fastq_set_id: str = Depends(sanitise_fqs_orcabu
     )
 
 
-# GET /fastqSet/{fastqSetId}:validateNtsmInternal
+# GET /fastqSet/{fastqSetId}:validateNtsmExternal/{fastqSetId}
 @router.get(
-    "/fastqSet/{fastq_set_id_x}:validateNtsmExternal/{fastq_set_id_y}",
+    "/{fastq_set_id_x}:validateNtsmExternal/{fastq_set_id_y}",
     tags=["fastqset ntsm"],
     description="Validate all fastq list rows in the ntsm match, run all-by-all on the ntsms in the fastq set"
 )
-async def validate_ntsm_internal(fastq_set_id_x: str = Depends(sanitise_fqs_orcabus_id_x), fastq_set_id_y = Depends(sanitise_fqs_orcabus_id_y)) -> Dict:
+async def validate_ntsm_external(fastq_set_id_x: str = Depends(sanitise_fqs_orcabus_id_x), fastq_set_id_y = Depends(sanitise_fqs_orcabus_id_y)) -> Dict:
     # Get the fastq set object
     fastq_set_obj_x = FastqSetData.get(fastq_set_id_x)
     fastq_set_obj_y = FastqSetData.get(fastq_set_id_y)

@@ -316,7 +316,18 @@ export class FastqManagerStack extends Stack {
 
     16384 (16 vCPU) - Available memory values: Between 32768 (32 GB) and 122880 (120 GB) in increments of 8192 (8 GB)
     */
-    const taskDefinition = new ecs.FargateTaskDefinition(this, taskName, {
+
+    // Allow the task definition role ecr access to the guardduty agent
+    // https://docs.aws.amazon.com/guardduty/latest/ug/prereq-runtime-monitoring-ecs-support.html#before-enable-runtime-monitoring-ecs
+    // Which is in another account - 005257825471.dkr.ecr.ap-southeast-2.amazonaws.com/aws-guardduty-agent-fargate
+    const taskExecutionRole = new iam.Role(this, `${taskName}-execution-role`, {
+      assumedBy: new iam.ServicePrincipal('ecs-tasks.amazonaws.com'),
+      managedPolicies: [
+        ManagedPolicy.fromAwsManagedPolicyName('service-role/AmazonECSTaskExecutionRolePolicy'),
+      ],
+    });
+
+    return new ecs.FargateTaskDefinition(this, taskName, {
       runtimePlatform: {
         cpuArchitecture: ecs.CpuArchitecture.ARM64,
       },
@@ -324,16 +335,8 @@ export class FastqManagerStack extends Stack {
       cpu: vCpu * 1024,
       // Multiple memory by 2^20 to get the value in MiB
       memoryLimitMiB: memoryLimitGiB * 1024,
+      executionRole: taskExecutionRole,
     });
-
-    // Allow the task definition role ecr access to the guardduty agent
-    // Which is in another account - 005257825471.dkr.ecr.ap-southeast-2.amazonaws.com/aws-guardduty-agent-fargate
-    // https://docs.aws.amazon.com/guardduty/latest/ug/prereq-runtime-monitoring-ecs-support.html#before-enable-runtime-monitoring-ecs
-    taskDefinition.taskRole.addManagedPolicy(
-      ManagedPolicy.fromAwsManagedPolicyName('service-role/AmazonECSTaskExecutionRolePolicy')
-    );
-
-    return taskDefinition;
   }
 
   private build_shared_lambda_functions_in_sfns(props: sharedLambdaProps): sharedLambdaOutputs {
@@ -708,7 +711,6 @@ export class FastqManagerStack extends Stack {
         logRetention: RetentionDays.ONE_WEEK,
       }),
     });
-
     // Allow task definition access to read/write from buckets
     // Both gzip and md5sum tasks will need to read from the pipeline cache bucket
     // and write to the fastq cache bucket
