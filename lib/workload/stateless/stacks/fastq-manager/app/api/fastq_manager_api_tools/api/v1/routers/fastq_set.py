@@ -454,6 +454,109 @@ async def create_fastq(fastq_set_obj_create: FastqSetCreate) -> FastqSetResponse
     # Return the fastq as a dictionary
     return fastq_set_dict
 
+# Special 'Gets' need to go above the direct get to prevent conflicts
+# Where fastapi thinks that fqs.12345:validateNtsmInternal is a fastq set id
+# GET /fastqSet/{fastqSetId}:validateNtsmInternal
+@router.get(
+    "/{fastq_set_id}:validateNtsmInternal",
+    tags=["fastqset ntsm"],
+    description="Validate all fastq list rows in the ntsm match, run all-by-all on the ntsms in the fastq set"
+)
+async def validate_ntsm_internal(fastq_set_id: str = Depends(sanitise_fqs_orcabus_id)) -> Dict:
+    # Get the fastq set object
+    fastq_set_obj = FastqSetData.get(fastq_set_id)
+
+    # Check fastq set exists
+    if fastq_set_obj is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Fastq set '{fastq_set_id}' does not exist"
+        )
+
+    # Get the fastq list rows
+    fastq_list_rows = list(map(
+        lambda fastq_set_id_iter: FastqListRowData.get(fastq_set_id_iter),
+        fastq_set_obj.fastq_set_ids
+    ))
+
+    # Check fastq list rows have an ntsm object
+    if not all(list(filter(
+        lambda fastq_list_row_iter_: fastq_list_row_iter_.ntsm is not None,
+        fastq_list_rows
+    ))):
+        raise HTTPException(
+            status_code=409,
+            detail="One or more fastq list rows do not have ntsm objects"
+        )
+
+    # Run all-by-all on the ntsms
+    return run_ntsm_eval(
+        fastq_set_obj.id
+    )
+
+
+# GET /fastqSet/{fastqSetId}:validateNtsmExternal/{fastqSetId}
+@router.get(
+    "/{fastq_set_id_x}:validateNtsmExternal/{fastq_set_id_y}",
+    tags=["fastqset ntsm"],
+    description="Validate all fastq list rows in the ntsm match, run all-by-all on the ntsms in the fastq set"
+)
+async def validate_ntsm_external(fastq_set_id_x: str = Depends(sanitise_fqs_orcabus_id_x), fastq_set_id_y = Depends(sanitise_fqs_orcabus_id_y)) -> Dict:
+    # Get the fastq set object
+    fastq_set_obj_x = FastqSetData.get(fastq_set_id_x)
+    fastq_set_obj_y = FastqSetData.get(fastq_set_id_y)
+
+    # Check fastq set exists
+    if fastq_set_obj_x is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Fastq set '{fastq_set_id_x}' does not exist"
+        )
+
+    # Get the fastq list rows
+    fastq_list_rows_x = list(map(
+        lambda fastq_obj_iter_: FastqListRowData.get(fastq_obj_iter_),
+        fastq_set_obj_x.fastq_set_ids
+    ))
+
+    # Check fastq list rows have an ntsm object
+    if not all(list(filter(
+        lambda fastq_list_row_iter_: fastq_list_row_iter_.ntsm is not None,
+        fastq_list_rows_x
+    ))):
+        raise HTTPException(
+            status_code=409,
+            detail="One or more fastq list rows do not have ntsm objects"
+        )
+
+    # Check fastq set exists
+    if fastq_set_obj_y is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Fastq set '{fastq_set_id_y}' does not exist"
+        )
+
+    # Get the fastq list rows
+    fastq_list_rows_y = list(map(
+        lambda fastq_obj_iter_: FastqListRowData.get(fastq_obj_iter_),
+        fastq_set_obj_y.fastq_set_ids
+    ))
+
+    # Check fastq list rows have an ntsm object
+    if not all(list(filter(
+        lambda fastq_list_row_iter_: fastq_list_row_iter_.ntsm is not None,
+        fastq_list_rows_y
+    ))):
+        raise HTTPException(
+            status_code=409,
+            detail="One or more fastq list rows do not have ntsm objects"
+        )
+
+    # Run all-by-all on the ntsms
+    return run_ntsm_eval(
+        fastq_set_obj_x.id, fastq_set_obj_y.id
+    )
+
 
 # Direct Get
 @router.get(
@@ -900,103 +1003,4 @@ async def merge_fastq_sets(fastq_set_ids: MergePatch = Depends()) -> FastqSetRes
     return new_fastq_set_data_obj_dict
 
 
-# GET /fastqSet/{fastqSetId}:validateNtsmInternal
-@router.get(
-    "/fastqSet/{fastq_set_id}:validateNtsmInternal",
-    tags=["fastqset ntsm"],
-    description="Validate all fastq list rows in the ntsm match, run all-by-all on the ntsms in the fastq set"
-)
-async def validate_ntsm_internal(fastq_set_id: str = Depends(sanitise_fqs_orcabus_id)) -> Dict:
-    # Get the fastq set object
-    fastq_set_obj = FastqSetData.get(fastq_set_id)
 
-    # Check fastq set exists
-    if fastq_set_obj is None:
-        raise HTTPException(
-            status_code=404,
-            detail=f"Fastq set '{fastq_set_id}' does not exist"
-        )
-
-    # Get the fastq list rows
-    fastq_list_rows = list(map(
-        lambda fastq_set_id_iter: FastqListRowData.get(fastq_set_id_iter),
-        fastq_set_obj.fastq_set_ids
-    ))
-
-    # Check fastq list rows have an ntsm object
-    if not all(list(filter(
-        lambda fastq_list_row_iter_: fastq_list_row_iter_.ntsm is not None,
-        fastq_list_rows
-    ))):
-        raise HTTPException(
-            status_code=409,
-            detail="One or more fastq list rows do not have ntsm objects"
-        )
-
-    # Run all-by-all on the ntsms
-    return run_ntsm_eval(
-        fastq_set_obj.id
-    )
-
-
-# GET /fastqSet/{fastqSetId}:validateNtsmInternal
-@router.get(
-    "/fastqSet/{fastq_set_id_x}:validateNtsmExternal/{fastq_set_id_y}",
-    tags=["fastqset ntsm"],
-    description="Validate all fastq list rows in the ntsm match, run all-by-all on the ntsms in the fastq set"
-)
-async def validate_ntsm_internal(fastq_set_id_x: str = Depends(sanitise_fqs_orcabus_id_x), fastq_set_id_y = Depends(sanitise_fqs_orcabus_id_y)) -> Dict:
-    # Get the fastq set object
-    fastq_set_obj_x = FastqSetData.get(fastq_set_id_x)
-    fastq_set_obj_y = FastqSetData.get(fastq_set_id_y)
-
-    # Check fastq set exists
-    if fastq_set_obj_x is None:
-        raise HTTPException(
-            status_code=404,
-            detail=f"Fastq set '{fastq_set_id_x}' does not exist"
-        )
-
-    # Get the fastq list rows
-    fastq_list_rows_x = list(map(
-        lambda fastq_obj_iter_: FastqListRowData.get(fastq_obj_iter_),
-        fastq_set_obj_x.fastq_set_ids
-    ))
-
-    # Check fastq list rows have an ntsm object
-    if not all(list(filter(
-        lambda fastq_list_row_iter_: fastq_list_row_iter_.ntsm is not None,
-        fastq_list_rows_x
-    ))):
-        raise HTTPException(
-            status_code=409,
-            detail="One or more fastq list rows do not have ntsm objects"
-        )
-
-    # Check fastq set exists
-    if fastq_set_obj_y is None:
-        raise HTTPException(
-            status_code=404,
-            detail=f"Fastq set '{fastq_set_id_y}' does not exist"
-        )
-
-    # Get the fastq list rows
-    fastq_list_rows_y = list(map(
-        lambda fastq_obj_iter_: FastqListRowData.get(fastq_obj_iter_),
-        fastq_set_obj_y.fastq_set_ids
-    ))
-
-    # Check fastq list rows have an ntsm object
-    if not all(list(filter(
-        lambda fastq_list_row_iter_: fastq_list_row_iter_.ntsm is not None,
-        fastq_list_rows_y
-    ))):
-        raise HTTPException(
-            status_code=409,
-            detail="One or more fastq list rows do not have ntsm objects"
-        )
-
-    # Run all-by-all on the ntsms
-    return run_ntsm_eval(
-        fastq_set_obj_x.id, fastq_set_obj_y.id
-    )

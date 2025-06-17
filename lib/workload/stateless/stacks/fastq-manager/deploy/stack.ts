@@ -300,7 +300,7 @@ export class FastqManagerStack extends Stack {
     vCpu: number,
     memoryLimitGiB: number,
     taskName: string
-  ): FargateTaskDefinition {
+  ): [iam.IRole, FargateTaskDefinition] {
     /*
     256 (.25 vCPU) - Available memory values: 512 (0.5 GB), 1024 (1 GB), 2048 (2 GB)
 
@@ -316,6 +316,17 @@ export class FastqManagerStack extends Stack {
 
     16384 (16 vCPU) - Available memory values: Between 32768 (32 GB) and 122880 (120 GB) in increments of 8192 (8 GB)
     */
+
+    // Allow the task definition role ecr access to the guardduty agent
+    // https://docs.aws.amazon.com/guardduty/latest/ug/prereq-runtime-monitoring-ecs-support.html#before-enable-runtime-monitoring-ecs
+    // Which is in another account - 005257825471.dkr.ecr.ap-southeast-2.amazonaws.com/aws-guardduty-agent-fargate
+    const taskExecutionRole = new iam.Role(this, `${taskName}-execution-role`, {
+      assumedBy: new iam.ServicePrincipal('ecs-tasks.amazonaws.com'),
+      managedPolicies: [
+        ManagedPolicy.fromAwsManagedPolicyName('service-role/AmazonECSTaskExecutionRolePolicy'),
+      ],
+    });
+
     const taskDefinition = new ecs.FargateTaskDefinition(this, taskName, {
       runtimePlatform: {
         cpuArchitecture: ecs.CpuArchitecture.ARM64,
@@ -324,16 +335,10 @@ export class FastqManagerStack extends Stack {
       cpu: vCpu * 1024,
       // Multiple memory by 2^20 to get the value in MiB
       memoryLimitMiB: memoryLimitGiB * 1024,
+      executionRole: taskExecutionRole,
     });
 
-    // Allow the task definition role ecr access to the guardduty agent
-    // Which is in another account - 005257825471.dkr.ecr.ap-southeast-2.amazonaws.com/aws-guardduty-agent-fargate
-    // https://docs.aws.amazon.com/guardduty/latest/ug/prereq-runtime-monitoring-ecs-support.html#before-enable-runtime-monitoring-ecs
-    taskDefinition.taskRole.addManagedPolicy(
-      ManagedPolicy.fromAwsManagedPolicyName('service-role/AmazonECSTaskExecutionRolePolicy')
-    );
-
-    return taskDefinition;
+    return [taskExecutionRole, taskDefinition];
   }
 
   private build_shared_lambda_functions_in_sfns(props: sharedLambdaProps): sharedLambdaOutputs {
@@ -532,7 +537,7 @@ export class FastqManagerStack extends Stack {
 
     // Set up the cluster and task definitions
     const cluster = this.generate_ecs_cluster('qc-cluster');
-    const taskDefinition = this.build_ecs_task_definition(2, 4, 'qc-task');
+    const [qcTaskExecutionRole, taskDefinition] = this.build_ecs_task_definition(2, 4, 'qc-task');
     const qcContainer = taskDefinition.addContainer('qc-container', {
       image: ecs.ContainerImage.fromDockerImageAsset(qcDockerImageAsset),
       containerName: 'qc-container',
@@ -590,7 +595,7 @@ export class FastqManagerStack extends Stack {
     props.resultsBucket.grantRead(qcStateMachine, `${props.resultsPrefix}*`);
 
     NagSuppressions.addResourceSuppressions(
-      qcStateMachine,
+      [qcTaskExecutionRole, qcStateMachine],
       [
         {
           id: 'AwsSolutions-IAM5',
@@ -680,12 +685,12 @@ export class FastqManagerStack extends Stack {
     // We should be able to share the same task definition for both gzip and raw md5sum tasks
     const gzipCluster = this.generate_ecs_cluster('gzip-file-compression-cluster');
     const rawMd5sumCluster = this.generate_ecs_cluster('raw-md5sum-file-compression-cluster');
-    const gzipTaskDefinition = this.build_ecs_task_definition(
+    const [gzipTaskExecutionRole, gzipTaskDefinition] = this.build_ecs_task_definition(
       4,
       8,
       'gzipfilesizeinbytes-compression-task'
     );
-    const rawMd5sumTaskDefinition = this.build_ecs_task_definition(
+    const [rawMd5sumTaskExecutionRole, rawMd5sumTaskDefinition] = this.build_ecs_task_definition(
       4,
       8,
       'rawmd5sum-compression-task'
@@ -708,7 +713,6 @@ export class FastqManagerStack extends Stack {
         logRetention: RetentionDays.ONE_WEEK,
       }),
     });
-
     // Allow task definition access to read/write from buckets
     // Both gzip and md5sum tasks will need to read from the pipeline cache bucket
     // and write to the fastq cache bucket
@@ -782,7 +786,7 @@ export class FastqManagerStack extends Stack {
     //   "Resource": "*"
     // },
     NagSuppressions.addResourceSuppressions(
-      gzipTaskDefinition,
+      [gzipTaskExecutionRole, gzipTaskDefinition],
       [
         {
           id: 'AwsSolutions-IAM5',
@@ -792,7 +796,7 @@ export class FastqManagerStack extends Stack {
       true
     );
     NagSuppressions.addResourceSuppressions(
-      rawMd5sumTaskDefinition,
+      [rawMd5sumTaskExecutionRole, rawMd5sumTaskDefinition],
       [
         {
           id: 'AwsSolutions-IAM5',
@@ -849,8 +853,12 @@ export class FastqManagerStack extends Stack {
 
     // Set up the cluster and task definitions
     const cluster = this.generate_ecs_cluster('ntsm-cluster');
-    const taskDefinition = this.build_ecs_task_definition(4, 8, 'ntsm-task');
-    const ntsmCount = taskDefinition.addContainer('ntsm-container', {
+    const [ntsmCountTaskExecutionRole, ntsmCountTaskDefinition] = this.build_ecs_task_definition(
+      4,
+      8,
+      'ntsm-task'
+    );
+    const ntsmCount = ntsmCountTaskDefinition.addContainer('ntsm-container', {
       image: ecs.ContainerImage.fromDockerImageAsset(ntsmCountEcrImageAsset),
       containerName: 'ntsm-container',
       logging: ecs.LogDriver.awsLogs({
@@ -860,8 +868,11 @@ export class FastqManagerStack extends Stack {
     });
 
     // Allow task definition access to read/write from buckets
-    props.pipelineCacheBucket.grantRead(taskDefinition.taskRole, `${props.pipelineCachePrefix}*`);
-    props.resultsBucket.grantReadWrite(taskDefinition.taskRole, `${props.resultsPrefix}*`);
+    props.pipelineCacheBucket.grantRead(
+      ntsmCountTaskDefinition.taskRole,
+      `${props.pipelineCachePrefix}*`
+    );
+    props.resultsBucket.grantReadWrite(ntsmCountTaskDefinition.taskRole, `${props.resultsPrefix}*`);
 
     // Set up the step function
     const ntsmStateMachine = new sfn.StateMachine(this, 'ntsmCountStateMachine', {
@@ -878,7 +889,7 @@ export class FastqManagerStack extends Stack {
         __ntsm_prefix__: props.resultsPrefix,
         /* Cluster stuff */
         __ntsm_count_cluster_arn__: cluster.clusterArn,
-        __ntsm_count_task_definition_arn__: taskDefinition.taskDefinitionArn,
+        __ntsm_count_task_definition_arn__: ntsmCountTaskDefinition.taskDefinitionArn,
         __ntsm_count_container_name__: ntsmCount.containerName,
         /* VPC stuff */
         __subnets__: cluster.vpc.privateSubnets.map((subnet) => subnet.subnetId).join(','),
@@ -907,7 +918,7 @@ export class FastqManagerStack extends Stack {
     props.resultsBucket.grantRead(ntsmStateMachine, `${props.resultsPrefix}*`);
 
     // Give the state machine permissions to run tasks on the cluster
-    taskDefinition.grantRun(ntsmStateMachine);
+    ntsmCountTaskDefinition.grantRun(ntsmStateMachine);
 
     // {
     //   "Action": "ecr:GetAuthorizationToken",
@@ -915,7 +926,7 @@ export class FastqManagerStack extends Stack {
     //   "Resource": "*"
     // },
     NagSuppressions.addResourceSuppressions(
-      taskDefinition,
+      [ntsmCountTaskExecutionRole, ntsmCountTaskDefinition],
       [
         {
           id: 'AwsSolutions-IAM5',
