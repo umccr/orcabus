@@ -55,7 +55,7 @@ import {
   OraDecompressionManagerStack,
   OraDecompressionManagerStackProps,
 } from './stacks/ora-decompression-manager/deploy';
-import { PgDDStack, PgDDStackProps } from './stacks/pg-dd/deploy/stack';
+import { PgDDStackProps } from './stacks/pg-dd/deploy/stack';
 import { DataMigrateStack, DataMigrateStackProps } from './stacks/data-migrate/deploy/stack';
 import { HtsgetStackProps } from './stacks/htsget/stack';
 import { SampleSheetCheckerStackProps } from './stacks/sample-sheet-check/stack';
@@ -204,6 +204,13 @@ export class StatelessStackCollection {
     //   ...statelessConfiguration.htsgetProps,
     // });
 
+    // if (statelessConfiguration.pgDDProps) {
+    //   this.pgDDStack = new PgDDStack(scope, 'PgDDStack', {
+    //     ...this.createTemplateProps(env, 'PgDDStack'),
+    //     ...statelessConfiguration.pgDDProps,
+    //   });
+    // }
+
     this.eventSchemaStack = new SchemaStack(scope, 'EventSchemaStack', {
       ...this.createTemplateProps(env, 'EventSchemaStack'),
       ...statelessConfiguration.eventSchemaStackProps,
@@ -327,13 +334,6 @@ export class StatelessStackCollection {
       ...this.createTemplateProps(env, 'DataMigrateStack'),
       ...statelessConfiguration.dataMigrateProps,
     });
-
-    if (statelessConfiguration.pgDDProps) {
-      this.pgDDStack = new PgDDStack(scope, 'PgDDStack', {
-        ...this.createTemplateProps(env, 'PgDDStack'),
-        ...statelessConfiguration.pgDDProps,
-      });
-    }
 
     this.fastqManagerStack = new FastqManagerStack(scope, 'FastqManagerStack', {
       ...this.createTemplateProps(env, 'FastqManagerStack'),
