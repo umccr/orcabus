@@ -1155,7 +1155,7 @@
       ],
       "Retry": [
         {
-          "ErrorEquals": [],
+          "ErrorEquals": ["ECS.AmazonECSException"],
           "BackoffRate": 2,
           "IntervalSeconds": 60,
           "MaxAttempts": 5,
