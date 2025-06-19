@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import json
 from functools import reduce
 from operator import concat
 from typing import List, Dict, Union, Tuple
@@ -343,6 +344,6 @@ def update_ingest_id(s3_object_id: str, new_ingest_id: str) -> Dict:
         endpoint=f"{S3_LIST_ENDPOINT}/{s3_object_id}",
         json_data=json_data,
         params={
-            "updateTag": True
+            "updateTag": json.dumps(True)
         }
     )
