@@ -188,7 +188,8 @@ def get_presigned_urls_from_ingest_ids(ingest_ids: List[str]) -> List[Dict[str, 
         list(map(
             lambda ingest_id_batch_: (
                 get_request_response_results(S3_LIST_ENDPOINT + "/presign", {
-                    "ingestId[]": list(ingest_id_batch_)
+                    "ingestId[]": list(ingest_id_batch_),
+                    "isAccessible": "true"
                 })
             ),
             ingest_id_batches
