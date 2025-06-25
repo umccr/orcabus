@@ -73,7 +73,7 @@ export class OncoanalyserDnaOrRnaReadyConstruct extends Construct {
     triggerWorkflowName: 'tumor-normal',
     triggerDetailType: 'WorkflowRunStateChange',
     workflowName: 'oncoanalyser-wgts-dna',
-    workflowVersion: '1.0.0',
+    workflowVersion: '2.0.0',
   };
 
   public readonly RnaOnlyMap = {
@@ -83,7 +83,7 @@ export class OncoanalyserDnaOrRnaReadyConstruct extends Construct {
     triggerDetailType: 'LibraryStateChange',
     sampleType: 'WTS',
     workflowName: 'oncoanalyser-wgts-rna',
-    workflowVersion: '1.0.0',
+    workflowVersion: '2.0.0',
   };
 
   constructor(scope: Construct, id: string, props: OncoanalyserDnaOrRnaReadyConstructProps) {

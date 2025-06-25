@@ -43,7 +43,7 @@ export class OncoanalyserDnaToSashReadyConstruct extends Construct {
     outputSource: 'orcabus.sashinputeventglue',
     payloadVersion: '2024.07.23',
     workflowName: 'sash',
-    workflowVersion: '1.0.0',
+    workflowVersion: '0.6.0',
     tablePartitionName: 'library',
   };
 
