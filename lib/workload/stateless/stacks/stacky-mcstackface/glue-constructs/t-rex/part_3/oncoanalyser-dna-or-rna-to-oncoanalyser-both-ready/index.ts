@@ -46,7 +46,7 @@ export class OncoanalyserDnaRnaReadyConstruct extends Construct {
     outputSource: 'orcabus.oncoanalyserinputeventglue',
     payloadVersion: '2024.07.23',
     workflowName: 'oncoanalyser-wgts-dna-rna',
-    workflowVersion: '1.0.0',
+    workflowVersion: '2.0.0',
     tablePartitionName: 'library',
   };
 
