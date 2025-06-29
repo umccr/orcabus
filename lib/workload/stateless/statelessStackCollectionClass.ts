@@ -60,11 +60,8 @@ import { DataMigrateStack, DataMigrateStackProps } from './stacks/data-migrate/d
 import { HtsgetStackProps } from './stacks/htsget/stack';
 import { SampleSheetCheckerStackProps } from './stacks/sample-sheet-check/stack';
 import { FastqManagerStack, FastqManagerStackProps } from './stacks/fastq-manager/deploy/stack';
-import {
-  FastqUnarchivingManagerStack,
-  FastqUnarchivingManagerStackProps,
-} from './stacks/fastq-unarchiving/deploy';
-import { FastqSyncManagerStack, FastqSyncManagerStackProps } from './stacks/fastq-sync/deploy';
+import { FastqUnarchivingManagerStackProps } from './stacks/fastq-unarchiving/deploy';
+import { FastqSyncManagerStackProps } from './stacks/fastq-sync/deploy';
 import { Icav2DataCopyManagerStackProps } from './stacks/icav2-data-copy-manager/deploy';
 import {
   DataSharingStack,
@@ -211,6 +208,25 @@ export class StatelessStackCollection {
     //   });
     // }
 
+    // this.fastqUnarchivingManagerStack = new FastqUnarchivingManagerStack(
+    //   scope,
+    //   'FastqUnarchivingManagerStack',
+    //   {
+    //     ...this.createTemplateProps(env, 'FastqUnarchivingManagerStack'),
+    //     ...statelessConfiguration.fastqUnarchivingManagerStackProps,
+    //   }
+    // );
+
+    // this.fastqSyncManagerStack = new FastqSyncManagerStack(scope, 'FastqSyncManagerStack', {
+    //   ...this.createTemplateProps(env, 'FastqSyncManagerStack'),
+    //   ...statelessConfiguration.fastqSyncManagerStackProps,
+    // });
+
+    // this.icav2DataCopyManagerStack = new Icav2DataCopyManagerStack(scope, 'Icav2CopyManagerStack', {
+    //   ...this.createTemplateProps(env, 'Icav2CopyManagerStack'),
+    //   ...statelessConfiguration.icav2DataCopyManagerStackProps,
+    // });
+
     this.eventSchemaStack = new SchemaStack(scope, 'EventSchemaStack', {
       ...this.createTemplateProps(env, 'EventSchemaStack'),
       ...statelessConfiguration.eventSchemaStackProps,
@@ -340,23 +356,6 @@ export class StatelessStackCollection {
       ...statelessConfiguration.fastqManagerStackProps,
     });
 
-    this.fastqUnarchivingManagerStack = new FastqUnarchivingManagerStack(
-      scope,
-      'FastqUnarchivingManagerStack',
-      {
-        ...this.createTemplateProps(env, 'FastqUnarchivingManagerStack'),
-        ...statelessConfiguration.fastqUnarchivingManagerStackProps,
-      }
-    );
-
-    this.fastqSyncManagerStack = new FastqSyncManagerStack(scope, 'FastqSyncManagerStack', {
-      ...this.createTemplateProps(env, 'FastqSyncManagerStack'),
-      ...statelessConfiguration.fastqSyncManagerStackProps,
-    });
-    // this.icav2DataCopyManagerStack = new Icav2DataCopyManagerStack(scope, 'Icav2CopyManagerStack', {
-    //   ...this.createTemplateProps(env, 'Icav2CopyManagerStack'),
-    //   ...statelessConfiguration.icav2DataCopyManagerStackProps,
-    // });
     this.dataSharingStack = new DataSharingStack(scope, 'DataSharingStack', {
       ...this.createTemplateProps(env, 'DataSharingStack'),
       ...statelessConfiguration.dataSharingStackProps,
