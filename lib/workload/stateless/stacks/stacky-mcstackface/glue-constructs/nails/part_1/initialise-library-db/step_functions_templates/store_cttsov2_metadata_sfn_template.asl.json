@@ -1,48 +1,77 @@
 {
   "Comment": "A description of my state machine",
-  "StartAt": "Move Inputs",
+  "StartAt": "Save input vars",
   "States": {
-    "Move Inputs": {
+    "Save input vars": {
       "Type": "Pass",
-      "Next": "Initialise Library ID",
-      "Parameters": {
-        "inputs.$": "$",
-        "input_payload_data.$": "$.payload.data"
+      "Next": "Get project id from library id",
+      "Assign": {
+        "inputPayloadData": "{% $states.input.payload.data %}"
       }
     },
-    "Initialise Library ID": {
+    "Get project id from library id": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Output": "{% $states.result.Payload %}",
+      "Arguments": {
+        "FunctionName": "${__get_project_id_from_library_id_lambda_function_arn__}",
+        "Payload": {
+          "libraryOrcabusId": "{% $inputPayloadData.library.orcabusId %}"
+        }
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2,
+          "JitterStrategy": "FULL"
+        }
+      ],
+      "Next": "Initialise Library Id",
+      "Assign": {
+        "projectId": "{% $states.result.Payload.projectId %}"
+      }
+    },
+    "Initialise Library Id": {
       "Type": "Task",
       "Resource": "arn:aws:states:::dynamodb:putItem",
-      "Parameters": {
+      "Arguments": {
         "TableName": "${__table_name__}",
         "Item": {
           "id": {
-            "S.$": "$.input_payload_data.library.orcabusId"
+            "S": "{% $inputPayloadData.library.orcabusId %}"
           },
           "id_type": {
             "S": "${__library_partition_name__}"
           },
           "library_id": {
-            "S.$": "$.input_payload_data.library.libraryId"
+            "S": "{% $inputPayloadData.library.libraryId %}"
           },
           "library_obj": {
-            "S.$": "States.JsonToString($.input_payload_data.library)"
+            "S": "{% $string($inputPayloadData.library) %}"
           },
           "project_id": {
-            "S.$": "$.input_payload_data.projectSet[0].projectId"
+            "S": "{% $projectId %}"
           },
           "external_sample_id": {
-            "S.$": "$.input_payload_data.sample.externalSampleId"
+            "S": "{% $inputPayloadData.sample.externalSampleId %}"
           },
           "external_subject_id": {
-            "S.$": "$.input_payload_data.subject.subjectId"
+            "S": "{% $inputPayloadData.subject.subjectId %}"
           },
           "instrument_run_id": {
-            "S.$": "$.input_payload_data.instrumentRunId"
+            "S": "{% $inputPayloadData.instrumentRunId %}"
           }
         }
       },
       "End": true
     }
-  }
+  },
+  "QueryLanguage": "JSONata"
 }
