@@ -30,7 +30,7 @@ export class DataSharingS3AndTableStack extends cdk.Stack {
       // Generate bucket with the following name
       bucketName: props.bucketName,
       // Delete bucket when stack is deleted
-      removalPolicy: RemovalPolicy.DESTROY,
+      removalPolicy: RemovalPolicy.RETAIN_ON_UPDATE_OR_DELETE,
       // Enfore SSL
       enforceSSL: true,
     });
