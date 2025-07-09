@@ -59,14 +59,11 @@ import { PgDDStackProps } from './stacks/pg-dd/deploy/stack';
 import { DataMigrateStack, DataMigrateStackProps } from './stacks/data-migrate/deploy/stack';
 import { HtsgetStackProps } from './stacks/htsget/stack';
 import { SampleSheetCheckerStackProps } from './stacks/sample-sheet-check/stack';
-import { FastqManagerStack, FastqManagerStackProps } from './stacks/fastq-manager/deploy/stack';
+import { FastqManagerStackProps } from './stacks/fastq-manager/deploy/stack';
 import { FastqUnarchivingManagerStackProps } from './stacks/fastq-unarchiving/deploy';
 import { FastqSyncManagerStackProps } from './stacks/fastq-sync/deploy';
 import { Icav2DataCopyManagerStackProps } from './stacks/icav2-data-copy-manager/deploy';
-import {
-  DataSharingStack,
-  DataSharingStackProps,
-} from './stacks/data-sharing-manager/deploy/stack';
+import { DataSharingStackProps } from './stacks/data-sharing-manager/deploy/stack';
 import { FastqGlueStackProps } from './stacks/fastq-glue/deploy';
 
 export interface StatelessStackCollectionProps {
@@ -227,6 +224,16 @@ export class StatelessStackCollection {
     //   ...statelessConfiguration.icav2DataCopyManagerStackProps,
     // });
 
+    // this.fastqManagerStack = new FastqManagerStack(scope, 'FastqManagerStack', {
+    //   ...this.createTemplateProps(env, 'FastqManagerStack'),
+    //   ...statelessConfiguration.fastqManagerStackProps,
+    // });
+    //
+    // this.dataSharingStack = new DataSharingStack(scope, 'DataSharingStack', {
+    //   ...this.createTemplateProps(env, 'DataSharingStack'),
+    //   ...statelessConfiguration.dataSharingStackProps,
+    // });
+
     this.eventSchemaStack = new SchemaStack(scope, 'EventSchemaStack', {
       ...this.createTemplateProps(env, 'EventSchemaStack'),
       ...statelessConfiguration.eventSchemaStackProps,
@@ -349,16 +356,6 @@ export class StatelessStackCollection {
     this.dataMigrate = new DataMigrateStack(scope, 'DataMigrateStack', {
       ...this.createTemplateProps(env, 'DataMigrateStack'),
       ...statelessConfiguration.dataMigrateProps,
-    });
-
-    this.fastqManagerStack = new FastqManagerStack(scope, 'FastqManagerStack', {
-      ...this.createTemplateProps(env, 'FastqManagerStack'),
-      ...statelessConfiguration.fastqManagerStackProps,
-    });
-
-    this.dataSharingStack = new DataSharingStack(scope, 'DataSharingStack', {
-      ...this.createTemplateProps(env, 'DataSharingStack'),
-      ...statelessConfiguration.dataSharingStackProps,
     });
   }
 
