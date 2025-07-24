@@ -55,23 +55,11 @@ import {
   OraCompressionIcav2PipelineTableStackProps,
 } from './stacks/ora-decompression-dynamodb/deploy/stack';
 import { AccessKeySecretStackProps } from './stacks/access-key-secret';
-import {
-  FastqManagerTable,
-  FastqManagerTableStackProps,
-} from './stacks/fastq-manager-db/deploy/stack';
-import {
-  FastqUnarchivingManagerTable,
-  FastqUnarchivingManagerTableStackProps,
-} from './stacks/fastq-unarchiving-dynamodb/deploy';
-import {
-  FastqSyncManagerTable,
-  FastqSyncManagerTableStackProps,
-} from './stacks/fastq-sync-dynamodb/deploy/stack';
+import { FastqManagerTableStackProps } from './stacks/fastq-manager-db/deploy/stack';
+import { FastqUnarchivingManagerTableStackProps } from './stacks/fastq-unarchiving-dynamodb/deploy';
+import { FastqSyncManagerTableStackProps } from './stacks/fastq-sync-dynamodb/deploy/stack';
 import { Icav2DataCopyManagerTableStackProps } from './stacks/icav2-data-copy-manager-dynamo-db/deploy';
-import {
-  DataSharingS3AndTableStack,
-  DataSharingS3AndTableStackProps,
-} from './stacks/data-sharing-s3-and-db/deploy/stack';
+import { DataSharingS3AndTableStackProps } from './stacks/data-sharing-s3-and-db/deploy/stack';
 import { SharedStackProps } from './stacks/shared/stack';
 
 export interface StatefulStackCollectionProps {
@@ -169,6 +157,55 @@ export class StatefulStackCollection {
     //   ...statefulConfiguration.postgresManagerStackProps,
     // });
 
+    // this.fastqUnarchivingManagerTableStack = new FastqUnarchivingManagerTable(
+    //   scope,
+    //   'FastqUnarchivingManagerTableStack',
+    //   {
+    //     ...this.createTemplateProps(env, 'FastqUnarchivingManagerTableStack'),
+    //     ...statefulConfiguration.fastqUnarchivingManagerTableStackProps,
+    //   }
+    // );
+
+    // this.fastqSyncManagerTableStack = new FastqSyncManagerTable(
+    //   scope,
+    //   'FastqSyncManagerTableStack',
+    //   {
+    //     ...this.createTemplateProps(env, 'FastqSyncManagerTableStack'),
+    //     ...statefulConfiguration.fastqSyncManagerTableStackProps,
+    //   }
+    // );
+    // this.icav2DataCopyTableStack = new Icav2DataCopyManagerTable(
+    //   scope,
+    //   'Icav2DataCopyManagerTableStack',
+    //   {
+    //     ...this.createTemplateProps(env, 'Icav2DataCopyManagerTableStack'),
+    //     ...statefulConfiguration.icav2DataCopyTableStackProps,
+    //   }
+    // );
+
+    // this.bclconvertInteropQcIcav2PipelineTableStack =
+    //   new BclconvertInteropQcIcav2PipelineTableStack(
+    //     scope,
+    //     'BclconvertInteropQcIcav2PipelineTableStack',
+    //     {
+    //       ...this.createTemplateProps(env, 'BclconvertInteropQcIcav2PipelineTable'),
+    //       ...statefulConfiguration.bclconvertInteropQcIcav2PipelineTableStackProps,
+    //     }
+    //   );
+
+    // this.fastqManagerTableStack = new FastqManagerTable(scope, 'FastqManagerTableStack', {
+    //   ...this.createTemplateProps(env, 'FastqManagerTableStack'),
+    //   ...statefulConfiguration.fastqManagerTableStackProps,
+    // });
+
+    // this.dataSharingS3AndTableStack = new DataSharingS3AndTableStack(
+    //   scope,
+    //   'DataSharingS3AndTableStack',
+    //   {
+    //     ...this.createTemplateProps(env, 'DataSharingS3AndTableStack'),
+    //     ...statefulConfiguration.dataSharingS3AndTableStackProps,
+    //   }
+    // );
     // Currently this only needs to be deployed if bucketName exist as props
     if (statefulConfiguration.dataBucketStackProps.bucketName) {
       this.dataBucketStack = new DataBucketStack(scope, 'DataBucketStack', {
@@ -181,16 +218,6 @@ export class StatefulStackCollection {
       ...this.createTemplateProps(env, 'IcaEventPipeStack'),
       ...statefulConfiguration.icaEventPipeStackProps,
     });
-
-    // this.bclconvertInteropQcIcav2PipelineTableStack =
-    //   new BclconvertInteropQcIcav2PipelineTableStack(
-    //     scope,
-    //     'BclconvertInteropQcIcav2PipelineTableStack',
-    //     {
-    //       ...this.createTemplateProps(env, 'BclconvertInteropQcIcav2PipelineTable'),
-    //       ...statefulConfiguration.bclconvertInteropQcIcav2PipelineTableStackProps,
-    //     }
-    //   );
 
     this.cttsov2Icav2PipelineTableStack = new Cttsov2Icav2PipelineTable(
       scope,
@@ -287,45 +314,6 @@ export class StatefulStackCollection {
       ...this.createTemplateProps(env, 'SashNfPipelineTableStack'),
       ...statefulConfiguration.sashPipelineTableStackProps,
     });
-
-    this.fastqManagerTableStack = new FastqManagerTable(scope, 'FastqManagerTableStack', {
-      ...this.createTemplateProps(env, 'FastqManagerTableStack'),
-      ...statefulConfiguration.fastqManagerTableStackProps,
-    });
-
-    this.fastqUnarchivingManagerTableStack = new FastqUnarchivingManagerTable(
-      scope,
-      'FastqUnarchivingManagerTableStack',
-      {
-        ...this.createTemplateProps(env, 'FastqUnarchivingManagerTableStack'),
-        ...statefulConfiguration.fastqUnarchivingManagerTableStackProps,
-      }
-    );
-
-    this.fastqSyncManagerTableStack = new FastqSyncManagerTable(
-      scope,
-      'FastqSyncManagerTableStack',
-      {
-        ...this.createTemplateProps(env, 'FastqSyncManagerTableStack'),
-        ...statefulConfiguration.fastqSyncManagerTableStackProps,
-      }
-    );
-    // this.icav2DataCopyTableStack = new Icav2DataCopyManagerTable(
-    //   scope,
-    //   'Icav2DataCopyManagerTableStack',
-    //   {
-    //     ...this.createTemplateProps(env, 'Icav2DataCopyManagerTableStack'),
-    //     ...statefulConfiguration.icav2DataCopyTableStackProps,
-    //   }
-    // );
-    this.dataSharingS3AndTableStack = new DataSharingS3AndTableStack(
-      scope,
-      'DataSharingS3AndTableStack',
-      {
-        ...this.createTemplateProps(env, 'DataSharingS3AndTableStack'),
-        ...statefulConfiguration.dataSharingS3AndTableStackProps,
-      }
-    );
   }
 
   /**
