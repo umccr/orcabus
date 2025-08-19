@@ -111,6 +111,14 @@ export class OncoanalyserNfPipelineManagerStack extends cdk.Stack {
         detail: {
           status: [this.triggerLaunchStatus],
           workflowName: [{ prefix: { 'equals-ignore-case': props.workflowTypePrefix } }],
+          payload: {
+            version: [
+              {
+                // listen to older versions only
+                prefix: '2024',
+              },
+            ],
+          },
         },
       },
     });
