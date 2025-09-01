@@ -40,6 +40,7 @@ export class OncoanalyserDnaToSashReadyConstruct extends Construct {
     triggerStatus: 'succeeded',
     triggerWorkflowName: 'oncoanalyser-wgts-dna',
     triggerDetailType: 'WorkflowRunStateChange',
+    triggerPayloadVersion: '2024.10.17',
     outputSource: 'orcabus.sashinputeventglue',
     payloadVersion: '2024.07.23',
     workflowName: 'sash',
@@ -191,6 +192,9 @@ export class OncoanalyserDnaToSashReadyConstruct extends Construct {
               'equals-ignore-case': this.SashReadyMap.triggerWorkflowName,
             },
           ],
+          payload: {
+            version: [this.SashReadyMap.triggerPayloadVersion],
+          },
         },
       },
     });

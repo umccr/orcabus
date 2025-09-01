@@ -53,6 +53,7 @@ export class SashNfPipelineManagerStack extends cdk.Stack {
   private readonly eventBusObj: events.IEventBus;
   private readonly pipelineVersionSsmObj: ssm.IStringParameter;
   private readonly prefix = 'sash';
+  private readonly triggerLaunchStatus = 'READY';
 
   constructor(scope: Construct, id: string, props: SashNfPipelineManagerStackProps) {
     super(scope, id, props);
@@ -98,6 +99,28 @@ export class SashNfPipelineManagerStack extends cdk.Stack {
       memorySize: 1024,
     });
 
+    /* Our own rules for the batch ready event */
+    const rule = new events.Rule(this, 'rule', {
+      eventBus: this.eventBusObj,
+      ruleName: `${props.stateMachinePrefix}-ready-rule`,
+      eventPattern: {
+        source: [props.triggerLaunchSource],
+        detailType: [props.detailType],
+        detail: {
+          status: [this.triggerLaunchStatus],
+          workflowName: [{ 'equals-ignore-case': this.prefix }],
+          payload: {
+            version: [
+              {
+                // listen to older versions only
+                prefix: '2024',
+              },
+            ],
+          },
+        },
+      },
+    });
+
     // Create the step function to launch the ready event
     const nfBatchReadyConstruct = new WfmWorkflowStateChangeNfBatchReadyEventHandlerConstruct(
       this,
@@ -130,6 +153,9 @@ export class SashNfPipelineManagerStack extends cdk.Stack {
 
         /* Internal workflowRunStateChange event details */
         workflowName: props.workflowType,
+
+        /* We use our own rule */
+        targetRule: rule,
       }
     );
 
