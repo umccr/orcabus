@@ -19,7 +19,40 @@ def handler(event, context) -> Dict[str, Dict]:
 
     # Get the boolean parameters from the event input
     cwl_parameter_dict: Dict = {
-        "enable_duplicate_marking": event_data_input.get('enableDuplicateMarking', False)
+        "enable_duplicate_marking": event_data_input.get('enableDuplicateMarking', False),
+        # Add in the cwltools overrides into this step
+        "cwltool:overrides": {
+            # Biocontainer overrides
+            "workflow.cwl#dragen-transcriptome-pipeline--4.2.4/run_qualimap_step": {
+                "requirements": {
+                    "DockerRequirement": {
+                        "dockerPull": "quay.io/biocontainers/qualimap:2.2.2d--hdfd78af_2"
+                    }
+                }
+            },
+            "workflow.cwl#dragen-transcriptome-pipeline--4.2.4/arriba_fusion_step": {
+                "requirements": {
+                    "DockerRequirement": {
+                        "dockerPull": "quay.io/biocontainers/arriba:2.4.0--ha04fe3b_0"
+                    }
+                }
+            },
+            "workflow.cwl#dragen-transcriptome-pipeline--4.2.4/arriba_drawing_step": {
+                "requirements": {
+                    "DockerRequirement": {
+                        "dockerPull": "quay.io/biocontainers/arriba:2.4.0--ha04fe3b_0"
+                    }
+                }
+            },
+            # F2 Image
+            "workflow.cwl#dragen-transcriptome-pipeline--4.2.4/run_dragen_transcriptome_step": {
+                "requirements": {
+                    "DockerRequirement": {
+                        "dockerPull": "079623148045.dkr.ecr.us-east-1.amazonaws.com/cp-prod/627166f0-ab0e-40f4-a191-91e6fcaf50d2:latest"
+                    }
+                }
+            },
+        }
     }
 
     # Remove the None values from the dictionary

@@ -30,7 +30,33 @@ def handler(event, context) -> Dict[str, Dict]:
         # HRD is somatic Only
         "enable_hrd": event_data_input.get('enableHrdSomatic', None),
         "enable_sv_somatic": event_data_input.get('enableSvSomatic', None),
-        "cnv_use_somatic_vc_baf": event_data_input.get('cnvUseSomaticVcBaf', None)
+        "cnv_use_somatic_vc_baf": event_data_input.get('cnvUseSomaticVcBaf', None),
+        # Add in the cwltools overrides into this step
+        "cwltool:overrides": {
+            # Biocontainers override
+            "workflow.cwl#dragen-somatic-with-germline-pipeline--4.2.4/run_dragen_qc_step": {
+                "requirements": {
+                    "DockerRequirement": {
+                        "dockerPull": "quay.io/biocontainers/multiqc:1.14--pyhdfd78af_0"
+                    }
+                }
+            },
+            # F2 Image
+            "workflow.cwl#dragen-somatic-with-germline-pipeline--4.2.4/run_dragen_germline_step": {
+                "requirements": {
+                    "DockerRequirement": {
+                        "dockerPull": "079623148045.dkr.ecr.us-east-1.amazonaws.com/cp-prod/627166f0-ab0e-40f4-a191-91e6fcaf50d2:latest"
+                    }
+                }
+            },
+            "workflow.cwl#dragen-somatic-with-germline-pipeline--4.2.4/run_dragen_somatic_step": {
+                "requirements": {
+                    "DockerRequirement": {
+                        "dockerPull": "079623148045.dkr.ecr.us-east-1.amazonaws.com/cp-prod/627166f0-ab0e-40f4-a191-91e6fcaf50d2:latest"
+                    }
+                }
+            }
+        }
     }
 
     # Remove the None values from the dictionary
