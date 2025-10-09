@@ -178,6 +178,7 @@ export class WfmWorkflowStateChangeIcav2ReadyEventHandlerConstruct extends Const
         detail: {
           status: ['READY'],
           workflowName: [{ 'equals-ignore-case': props.workflowName }],
+          workflowVersion: [{ 'equals-ignore-case': props.workflowVersion }],
         },
       },
     });
