@@ -189,6 +189,15 @@
           "ora_reference_tar": {
             "class": "File",
             "location": "s3://pipeline-prod-cache-503977275616-ap-southeast-2/byob-icav2/reference-data/dragen-ora/v2/ora_reference_v2.tar.gz"
+          },
+          "cwltool:overrides": {
+            "workflow.cwl#dragen-alignment-pipeline--4.2.4/run_dragen_alignment_step": {
+              "requirements": {
+                "DockerRequirement": {
+                  "dockerPull": "079623148045.dkr.ecr.us-east-1.amazonaws.com/cp-prod/627166f0-ab0e-40f4-a191-91e6fcaf50d2:latest"
+                }
+              }
+            }
           }
         }
       },
