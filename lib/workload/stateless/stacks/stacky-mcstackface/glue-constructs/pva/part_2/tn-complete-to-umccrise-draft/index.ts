@@ -13,6 +13,7 @@ import * as secretsManager from 'aws-cdk-lib/aws-secretsmanager';
 import { WorkflowDraftRunStateChangeCommonPreambleConstruct } from '../../../../../../../components/sfn-workflowdraftrunstatechange-common-preamble';
 import { GenerateWorkflowRunStateChangeReadyConstruct } from '../../../../../../../components/sfn-generate-workflowrunstatechange-ready-event';
 import { NagSuppressions } from 'cdk-nag';
+import { EventField } from 'aws-cdk-lib/aws-events';
 
 /*
 Part 2
@@ -188,7 +189,6 @@ export class TnCompleteToUmccriseReadyConstruct extends Construct {
 
     /*
     Part 3: Subscribe to the event bus and trigger the internal sfn
-    // FIXME, add translation in event target here
     */
     const rule = new events.Rule(this, 'tn_complete_to_umccrise_draft_rule', {
       ruleName: `stacky-${this.UmccriseReadyMap.prefix}-rule`,
@@ -198,11 +198,11 @@ export class TnCompleteToUmccriseReadyConstruct extends Construct {
         detailType: [this.UmccriseReadyMap.triggerDetailType],
         detail: {
           status: [{ 'equals-ignore-case': this.UmccriseReadyMap.triggerStatus }],
-          workflowName: [
-            {
+          workflow: {
+            name: {
               'equals-ignore-case': this.UmccriseReadyMap.triggerWorkflowName,
             },
-          ],
+          },
         },
       },
     });
@@ -210,7 +210,16 @@ export class TnCompleteToUmccriseReadyConstruct extends Construct {
     // Add target of event to be the state machine
     rule.addTarget(
       new eventsTargets.SfnStateMachine(qcCompleteToDraftSfn, {
-        input: events.RuleTargetInput.fromEventPath('$.detail'),
+        input: events.RuleTargetInput.fromObject({
+          status: EventField.fromPath('$.detail.status'),
+          timestamp: EventField.fromPath('$.detail.timestamp'),
+          workflowName: EventField.fromPath('$.detail.workflow.name'),
+          workflowVersion: EventField.fromPath('$.detail.workflow.version'),
+          workflowRunName: EventField.fromPath('$.detail.workflowRunName'),
+          portalRunId: EventField.fromPath('$.detail.portalRunId'),
+          linkedLibraries: EventField.fromPath('$.detail.libraries'),
+          payload: EventField.fromPath('$.detail.payload'),
+        }),
       })
     );
   }

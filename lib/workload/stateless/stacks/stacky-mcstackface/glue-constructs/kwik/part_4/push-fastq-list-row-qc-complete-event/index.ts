@@ -9,6 +9,7 @@ import { PythonFunction } from '@aws-cdk/aws-lambda-python-alpha';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import { Duration } from 'aws-cdk-lib';
+import { EventField } from 'aws-cdk-lib/aws-events';
 
 /*
 Part 6
@@ -129,7 +130,6 @@ export class FastqListRowQcCompleteConstruct extends Construct {
 
     /*
     Part 3: Subscribe to the event bus and trigger the internal sfn
-    // FIXME, add translation in event target here
     */
     const rule = new events.Rule(this, 'wgts_subscribe_to_samplesheet_shower', {
       ruleName: `stacky-${this.WgtsQcCompleteMap.prefix}-rule`,
@@ -139,19 +139,29 @@ export class FastqListRowQcCompleteConstruct extends Construct {
         detailType: [this.WgtsQcCompleteMap.triggerDetailType],
         detail: {
           status: [{ 'equals-ignore-case': this.WgtsQcCompleteMap.triggerStatus }],
-          workflowName: [
-            {
+          workflow: {
+            name: {
               'equals-ignore-case': this.WgtsQcCompleteMap.triggerWorkflowName,
             },
-          ],
+          },
         },
       },
     });
 
     // Add target of event to be the state machine
+    // But revert to a legacy event type for the target
     rule.addTarget(
       new eventsTargets.SfnStateMachine(qcCompleteSfn, {
-        input: events.RuleTargetInput.fromEventPath('$.detail'),
+        input: events.RuleTargetInput.fromObject({
+          status: EventField.fromPath('$.detail.status'),
+          timestamp: EventField.fromPath('$.detail.timestamp'),
+          workflowName: EventField.fromPath('$.detail.workflow.name'),
+          workflowVersion: EventField.fromPath('$.detail.workflow.version'),
+          workflowRunName: EventField.fromPath('$.detail.workflowRunName'),
+          portalRunId: EventField.fromPath('$.detail.portalRunId'),
+          linkedLibraries: EventField.fromPath('$.detail.libraries'),
+          payload: EventField.fromPath('$.detail.payload'),
+        }),
       })
     );
   }

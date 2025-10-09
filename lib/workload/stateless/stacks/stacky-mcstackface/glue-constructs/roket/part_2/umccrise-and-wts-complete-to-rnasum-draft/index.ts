@@ -15,6 +15,7 @@ import { GetMetadataLambdaConstruct } from '../../../../../../../components/pyth
 import { GenerateWorkflowRunStateChangeReadyConstruct } from '../../../../../../../components/sfn-generate-workflowrunstatechange-ready-event';
 import { rnasumIcav2PipelineVersion } from '../../../../../../../../../config/constants';
 import { NagSuppressions } from 'cdk-nag';
+import { EventField } from 'aws-cdk-lib/aws-events';
 
 /*
 Part 4
@@ -232,7 +233,6 @@ export class UmccriseAndWtsCompleteToRnasumReadyConstruct extends Construct {
 
     /*
     Part 3: Subscribe to the event bus and trigger the internal sfn
-    // FIXME, add translation in event target here
     */
     const rule = new events.Rule(this, 'umccrise_and_wts_to_rnasum_draft_rule', {
       ruleName: `stacky-${this.RnasumDraftMap.prefix}-rule`,
@@ -242,22 +242,34 @@ export class UmccriseAndWtsCompleteToRnasumReadyConstruct extends Construct {
         detailType: [this.RnasumDraftMap.triggerDetailType],
         detail: {
           status: [{ 'equals-ignore-case': this.RnasumDraftMap.triggerStatus }],
-          workflowName: [
-            {
-              'equals-ignore-case': this.RnasumDraftMap.triggerWorkflowName.umccrise,
-            },
-            {
-              'equals-ignore-case': this.RnasumDraftMap.triggerWorkflowName.wts,
-            },
-          ],
+          workflow: {
+            name: [
+              {
+                'equals-ignore-case': this.RnasumDraftMap.triggerWorkflowName.umccrise,
+              },
+              {
+                'equals-ignore-case': this.RnasumDraftMap.triggerWorkflowName.wts,
+              },
+            ],
+          },
         },
       },
     });
 
     // Add target of event to be the state machine
+    // But revert to a legacy event type for the target
     rule.addTarget(
       new eventsTargets.SfnStateMachine(umccriseAndWtsCompleteToDraftSfn, {
-        input: events.RuleTargetInput.fromEventPath('$.detail'),
+        input: events.RuleTargetInput.fromObject({
+          status: EventField.fromPath('$.detail.status'),
+          timestamp: EventField.fromPath('$.detail.timestamp'),
+          workflowName: EventField.fromPath('$.detail.workflow.name'),
+          workflowVersion: EventField.fromPath('$.detail.workflow.version'),
+          workflowRunName: EventField.fromPath('$.detail.workflowRunName'),
+          portalRunId: EventField.fromPath('$.detail.portalRunId'),
+          linkedLibraries: EventField.fromPath('$.detail.libraries'),
+          payload: EventField.fromPath('$.detail.payload'),
+        }),
       })
     );
   }

@@ -215,10 +215,12 @@
               "portalRunId.$": "$.get_event_data_step.portal_run_id",
               "timestamp.$": "$.get_event_data_step.timestamp",
               "status.$": "$.get_event_data_step.status",
-              "workflowName.$": "$.get_event_data_step.workflow_name",
-              "workflowVersion.$": "$.get_event_data_step.workflow_version",
+              "workflow": {
+                "name.$": "$.get_event_data_step.workflow_name",
+                "version.$": "$.get_event_data_step.workflow_version"
+              },
               "workflowRunName.$": "$.get_event_data_step.workflow_run_name",
-              "linkedLibraries.$": "$.get_event_data_step.linked_libraries",
+              "libraries.$": "$.get_event_data_step.linked_libraries",
               "payload": {
                 "version": "${__service_version__}",
                 "data.$": "$.set_data_event_outputs"
