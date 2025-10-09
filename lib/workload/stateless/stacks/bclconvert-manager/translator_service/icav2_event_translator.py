@@ -333,7 +333,10 @@ def parse_event_code(event_code):
     :return:
     """
 
-    if event_code == 'BCL_Convert_4-4-4_ORA_2-7-0_Default_Large':
+    if event_code in [
+        'BCL_Convert_4-4-4_ORA_2-7-0_Default_Large',
+        'BCL_Convert_4-4-4_ORA_2-7-0_Default_Large_v2'
+    ]:
         return "BCLConvert", "4.4.4"
 
     # Split the event code by space to separate the event name and version string
