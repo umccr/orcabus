@@ -129,6 +129,7 @@ export class FastqListRowQcCompleteConstruct extends Construct {
 
     /*
     Part 3: Subscribe to the event bus and trigger the internal sfn
+    // FIXME, add translation in event target here
     */
     const rule = new events.Rule(this, 'wgts_subscribe_to_samplesheet_shower', {
       ruleName: `stacky-${this.WgtsQcCompleteMap.prefix}-rule`,

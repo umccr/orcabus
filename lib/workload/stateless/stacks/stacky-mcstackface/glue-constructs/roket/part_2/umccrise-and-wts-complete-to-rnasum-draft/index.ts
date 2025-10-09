@@ -232,6 +232,7 @@ export class UmccriseAndWtsCompleteToRnasumReadyConstruct extends Construct {
 
     /*
     Part 3: Subscribe to the event bus and trigger the internal sfn
+    // FIXME, add translation in event target here
     */
     const rule = new events.Rule(this, 'umccrise_and_wts_to_rnasum_draft_rule', {
       ruleName: `stacky-${this.RnasumDraftMap.prefix}-rule`,

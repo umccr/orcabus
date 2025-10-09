@@ -188,6 +188,7 @@ export class TnCompleteToUmccriseReadyConstruct extends Construct {
 
     /*
     Part 3: Subscribe to the event bus and trigger the internal sfn
+    // FIXME, add translation in event target here
     */
     const rule = new events.Rule(this, 'tn_complete_to_umccrise_draft_rule', {
       ruleName: `stacky-${this.UmccriseReadyMap.prefix}-rule`,
