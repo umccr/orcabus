@@ -101,33 +101,33 @@ export class GlueConstruct extends Construct {
     /*
     Part D: Plumber-up the oncoanalyser services
     */
-    const handyPal = new OncoanalyserGlueHandlerConstruct(this, 'handyPal', {
-      /* Event Objects */
-      eventBusObj: props.eventBusObj,
-      /* Tables */
-      oncoanalyserGlueTableObj: props.oncoanalyserGlueTableObj,
-      /* SSM Parameter Objects */
-      analysisCacheUriSsmParameterObj: props.analysisCacheUriSsmParameterObj,
-      analysisLogsUriSsmParameterObj: props.analysisLogsUriSsmParameterObj,
-      analysisOutputUriSsmParameterObj: props.analysisOutputUriSsmParameterObj,
-    });
+    // const handyPal = new OncoanalyserGlueHandlerConstruct(this, 'handyPal', {
+    //   /* Event Objects */
+    //   eventBusObj: props.eventBusObj,
+    //   /* Tables */
+    //   oncoanalyserGlueTableObj: props.oncoanalyserGlueTableObj,
+    //   /* SSM Parameter Objects */
+    //   analysisCacheUriSsmParameterObj: props.analysisCacheUriSsmParameterObj,
+    //   analysisLogsUriSsmParameterObj: props.analysisLogsUriSsmParameterObj,
+    //   analysisOutputUriSsmParameterObj: props.analysisOutputUriSsmParameterObj,
+    // });
 
     /*
     Part D: Plumber-up the cttso v2 to the shower services
     */
-    const jb_weld = new Cttsov2GlueHandlerConstruct(this, 'jb_weld', {
-      /* Event Bus */
-      eventBusObj: props.eventBusObj,
-      /* Tables */
-      cttsov2GlueTableObj: props.cttsov2GlueTableObj,
-      /* SSM Parameters */
-      icav2ProjectIdSsmParameterObj: props.icav2ProjectIdSsmParameterObj,
-      analysisOutputUriSsmParameterObj: props.analysisOutputUriSsmParameterObj,
-      analysisCacheUriSsmParameterObj: props.analysisCacheUriSsmParameterObj,
-      analysisLogsUriSsmParameterObj: props.analysisLogsUriSsmParameterObj,
-      /* Secrets */
-      icav2AccessTokenSecretObj: props.icav2AccessTokenSecretObj,
-    });
+    // const jb_weld = new Cttsov2GlueHandlerConstruct(this, 'jb_weld', {
+    //   /* Event Bus */
+    //   eventBusObj: props.eventBusObj,
+    //   /* Tables */
+    //   cttsov2GlueTableObj: props.cttsov2GlueTableObj,
+    //   /* SSM Parameters */
+    //   icav2ProjectIdSsmParameterObj: props.icav2ProjectIdSsmParameterObj,
+    //   analysisOutputUriSsmParameterObj: props.analysisOutputUriSsmParameterObj,
+    //   analysisCacheUriSsmParameterObj: props.analysisCacheUriSsmParameterObj,
+    //   analysisLogsUriSsmParameterObj: props.analysisLogsUriSsmParameterObj,
+    //   /* Secrets */
+    //   icav2AccessTokenSecretObj: props.icav2AccessTokenSecretObj,
+    // });
 
     /*
     Part E: Plumber-up the WGTS QC Execution Service to the shower services
@@ -183,20 +183,20 @@ export class GlueConstruct extends Construct {
     /*
     Part H: Plumber-up the cttsov2 to pieriandx services
     */
-    const nails = new PieriandxGlueHandlerConstruct(this, 'nails', {
-      /* Event Bus */
-      eventBusObj: props.eventBusObj,
-
-      /* Tables */
-      pieriandxGlueTableObj: props.pieriandxGlueTableObj,
-
-      /* Secrets */
-      icav2AccessTokenSecretObj: props.icav2AccessTokenSecretObj,
-
-      /* Extras */
-      pieriandxProjectInfoSsmParameterObj: props.pieriandxProjectInfoSsmParameterObj,
-      redcapLambdaObj: props.redcapLambdaObj,
-    });
+    // const nails = new PieriandxGlueHandlerConstruct(this, 'nails', {
+    //   /* Event Bus */
+    //   eventBusObj: props.eventBusObj,
+    //
+    //   /* Tables */
+    //   pieriandxGlueTableObj: props.pieriandxGlueTableObj,
+    //
+    //   /* Secrets */
+    //   icav2AccessTokenSecretObj: props.icav2AccessTokenSecretObj,
+    //
+    //   /* Extras */
+    //   pieriandxProjectInfoSsmParameterObj: props.pieriandxProjectInfoSsmParameterObj,
+    //   redcapLambdaObj: props.redcapLambdaObj,
+    // });
 
     /*
     Part I: Plumber-up the UMCCRise Execution Service to the shower services
@@ -236,16 +236,16 @@ export class GlueConstruct extends Construct {
     Part K: Plumber up the oncoanalyser-wgts-dna-rna and sash service - both
     have the same entry point so we can use the same construct
     */
-    const tRex = new OncoanalyserBothSashGlueHandlerConstruct(this, 'trex', {
-      /* Event Objects */
-      eventBusObj: props.eventBusObj,
-      /* Tables */
-      oncoanalyserBothSashGlueTableObj: props.oncoanalyserBothSashGlueTableObj,
-      /* SSM Parameter Objects */
-      analysisCacheUriSsmParameterObj: props.analysisCacheUriSsmParameterObj,
-      analysisLogsUriSsmParameterObj: props.analysisLogsUriSsmParameterObj,
-      analysisOutputUriSsmParameterObj: props.analysisOutputUriSsmParameterObj,
-    });
+    // const tRex = new OncoanalyserBothSashGlueHandlerConstruct(this, 'trex', {
+    //   /* Event Objects */
+    //   eventBusObj: props.eventBusObj,
+    //   /* Tables */
+    //   oncoanalyserBothSashGlueTableObj: props.oncoanalyserBothSashGlueTableObj,
+    //   /* SSM Parameter Objects */
+    //   analysisCacheUriSsmParameterObj: props.analysisCacheUriSsmParameterObj,
+    //   analysisLogsUriSsmParameterObj: props.analysisLogsUriSsmParameterObj,
+    //   analysisOutputUriSsmParameterObj: props.analysisOutputUriSsmParameterObj,
+    // });
   }
 }
 

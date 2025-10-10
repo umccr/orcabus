@@ -3,10 +3,7 @@ import { Stack, Environment, StackProps } from 'aws-cdk-lib';
 import { FilemanagerProps } from './stacks/filemanager/deploy/stack';
 import { BsshIcav2FastqCopyManagerStackProps } from './stacks/bssh-icav2-fastq-copy-manager/deploy/stack';
 import { BclconvertInteropQcIcav2PipelineManagerStackProps } from './stacks/bclconvert-interop-qc-pipeline-manager/deploy/stack';
-import {
-  Cttsov2Icav2PipelineManagerStackProps,
-  Cttsov2Icav2PipelineManagerStack,
-} from './stacks/cttso-v2-pipeline-manager/deploy/stack';
+import { Cttsov2Icav2PipelineManagerStackProps } from './stacks/cttso-v2-pipeline-manager/deploy/stack';
 import { SchemaStack, SchemaStackProps } from './stacks/schema/stack';
 import {
   BclConvertManagerStack,
@@ -33,28 +30,13 @@ import {
   RnasumIcav2PipelineManagerStack,
   RnasumIcav2PipelineManagerStackProps,
 } from './stacks/rnasum-pipeline-manager/deploy';
-import {
-  OraCompressionIcav2PipelineManagerStack,
-  OraCompressionIcav2PipelineManagerStackProps,
-} from './stacks/ora-compression-manager/deploy';
+import { OraCompressionIcav2PipelineManagerStackProps } from './stacks/ora-compression-manager/deploy';
 
 import { FMAnnotatorProps } from './stacks/fmannotator/deploy/stack';
-import {
-  PieriandxPipelineManagerStack,
-  PierianDxPipelineManagerStackProps,
-} from './stacks/pieriandx-pipeline-manager/deploy';
-import {
-  OncoanalyserNfPipelineManagerStack,
-  OncoanalyserNfPipelineManagerStackProps,
-} from './stacks/oncoanalyser-pipeline-manager/deploy';
-import {
-  SashNfPipelineManagerStack,
-  SashNfPipelineManagerStackProps,
-} from './stacks/sash-pipeline-manager/deploy';
-import {
-  OraDecompressionManagerStack,
-  OraDecompressionManagerStackProps,
-} from './stacks/ora-decompression-manager/deploy';
+import { PierianDxPipelineManagerStackProps } from './stacks/pieriandx-pipeline-manager/deploy';
+import { OncoanalyserNfPipelineManagerStackProps } from './stacks/oncoanalyser-pipeline-manager/deploy';
+import { SashNfPipelineManagerStackProps } from './stacks/sash-pipeline-manager/deploy';
+import { OraDecompressionManagerStackProps } from './stacks/ora-decompression-manager/deploy';
 import { PgDDStackProps } from './stacks/pg-dd/deploy/stack';
 import { DataMigrateStack, DataMigrateStackProps } from './stacks/data-migrate/deploy/stack';
 import { HtsgetStackProps } from './stacks/htsget/stack';
@@ -234,6 +216,60 @@ export class StatelessStackCollection {
     //   ...statelessConfiguration.dataSharingStackProps,
     // });
 
+    // this.pieriandxPipelineManagerStack = new PieriandxPipelineManagerStack(
+    //   scope,
+    //   'PieriandxPipelineManagerStack',
+    //   {
+    //     ...this.createTemplateProps(env, 'PieriandxPipelineManagerStack'),
+    //     ...statelessConfiguration.pieriandxPipelineManagerStackProps,
+    //   }
+    // );
+    //
+    // this.oncoanalyserPipelineManagerStack = new OncoanalyserNfPipelineManagerStack(
+    //   scope,
+    //   'OncoanalyserNfPipelineManagerStack',
+    //   {
+    //     ...this.createTemplateProps(env, 'OncoanalyserNfPipelineManagerStack'),
+    //     ...statelessConfiguration.oncoanalyserPipelineManagerStackProps,
+    //   }
+    // );
+    //
+    // this.sashPipelineManagerStack = new SashNfPipelineManagerStack(
+    //   scope,
+    //   'SashNfPipelineManagerStack',
+    //   {
+    //     ...this.createTemplateProps(env, 'SashNfPipelineManagerStack'),
+    //     ...statelessConfiguration.sashPipelineManagerStackProps,
+    //   }
+    // );
+    //
+    // this.oraCompressionIcav2PipelineManagerStack = new OraCompressionIcav2PipelineManagerStack(
+    //   scope,
+    //   'OraCompressionIcav2PipelineManagerStack',
+    //   {
+    //     ...this.createTemplateProps(env, 'OraCompressionIcav2PipelineManagerStack'),
+    //     ...statelessConfiguration.oraCompressionIcav2PipelineManagerStackProps,
+    //   }
+    // );
+    //
+    // this.oraDecompressionManagerStack = new OraDecompressionManagerStack(
+    //   scope,
+    //   'OraDecompressionManagerStack',
+    //   {
+    //     ...this.createTemplateProps(env, 'OraDecompressionManagerStack'),
+    //     ...statelessConfiguration.oraDecompressionManagerStackProps,
+    //   }
+    // );
+    //
+    // this.cttsov2Icav2PipelineManagerStack = new Cttsov2Icav2PipelineManagerStack(
+    //   scope,
+    //   'Cttsov2Icav2PipelineManagerStack',
+    //   {
+    //     ...this.createTemplateProps(env, 'Cttsov2Icav2PipelineManagerStack'),
+    //     ...statelessConfiguration.cttsov2Icav2PipelineManagerStackProps,
+    //   }
+    // );
+
     this.eventSchemaStack = new SchemaStack(scope, 'EventSchemaStack', {
       ...this.createTemplateProps(env, 'EventSchemaStack'),
       ...statelessConfiguration.eventSchemaStackProps,
@@ -243,15 +279,6 @@ export class StatelessStackCollection {
       ...this.createTemplateProps(env, 'DataSchemaStack'),
       ...statelessConfiguration.dataSchemaStackProps,
     });
-
-    this.cttsov2Icav2PipelineManagerStack = new Cttsov2Icav2PipelineManagerStack(
-      scope,
-      'Cttsov2Icav2PipelineManagerStack',
-      {
-        ...this.createTemplateProps(env, 'Cttsov2Icav2PipelineManagerStack'),
-        ...statelessConfiguration.cttsov2Icav2PipelineManagerStackProps,
-      }
-    );
 
     this.wgtsQcIcav2PipelineManagerStack = new WgtsQcIcav2PipelineManagerStack(
       scope,
@@ -295,51 +322,6 @@ export class StatelessStackCollection {
       {
         ...this.createTemplateProps(env, 'RnasumIcav2PipelineManagerStack'),
         ...statelessConfiguration.rnasumIcav2PipelineManagerStackProps,
-      }
-    );
-
-    this.pieriandxPipelineManagerStack = new PieriandxPipelineManagerStack(
-      scope,
-      'PieriandxPipelineManagerStack',
-      {
-        ...this.createTemplateProps(env, 'PieriandxPipelineManagerStack'),
-        ...statelessConfiguration.pieriandxPipelineManagerStackProps,
-      }
-    );
-
-    this.oncoanalyserPipelineManagerStack = new OncoanalyserNfPipelineManagerStack(
-      scope,
-      'OncoanalyserNfPipelineManagerStack',
-      {
-        ...this.createTemplateProps(env, 'OncoanalyserNfPipelineManagerStack'),
-        ...statelessConfiguration.oncoanalyserPipelineManagerStackProps,
-      }
-    );
-
-    this.sashPipelineManagerStack = new SashNfPipelineManagerStack(
-      scope,
-      'SashNfPipelineManagerStack',
-      {
-        ...this.createTemplateProps(env, 'SashNfPipelineManagerStack'),
-        ...statelessConfiguration.sashPipelineManagerStackProps,
-      }
-    );
-
-    this.oraCompressionIcav2PipelineManagerStack = new OraCompressionIcav2PipelineManagerStack(
-      scope,
-      'OraCompressionIcav2PipelineManagerStack',
-      {
-        ...this.createTemplateProps(env, 'OraCompressionIcav2PipelineManagerStack'),
-        ...statelessConfiguration.oraCompressionIcav2PipelineManagerStackProps,
-      }
-    );
-
-    this.oraDecompressionManagerStack = new OraDecompressionManagerStack(
-      scope,
-      'OraDecompressionManagerStack',
-      {
-        ...this.createTemplateProps(env, 'OraDecompressionManagerStack'),
-        ...statelessConfiguration.oraDecompressionManagerStackProps,
       }
     );
 
