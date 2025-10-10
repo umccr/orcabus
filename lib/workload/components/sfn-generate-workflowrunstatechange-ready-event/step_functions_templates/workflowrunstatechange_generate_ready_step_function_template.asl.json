@@ -58,10 +58,12 @@
               "portalRunId.$": "$.input_event_detail_draft.portal_run_id",
               "timestamp.$": "$$.State.EnteredTime",
               "status": "${__ready_status__}",
-              "workflowName": "${__workflow_name__}",
-              "workflowVersion": "${__workflow_version__}",
+              "workflow": {
+                "name": "${__workflow_name__}",
+                "version": "${__workflow_version__}"
+              },
               "workflowRunName.$": "$.input_event_detail_draft.workflow_run_name",
-              "linkedLibraries.$": "$.input_event_detail_draft.linked_libraries",
+              "libraries.$": "$.input_event_detail_draft.linked_libraries",
               "payload": {
                 "version": "${__payload_version__}",
                 "data": {

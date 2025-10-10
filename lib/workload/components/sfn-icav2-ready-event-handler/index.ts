@@ -12,6 +12,7 @@ import * as lambda from 'aws-cdk-lib/aws-lambda';
 import { Duration } from 'aws-cdk-lib';
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 import { NagSuppressions } from 'cdk-nag';
+import { EventField } from 'aws-cdk-lib/aws-events';
 
 export interface WfmWorkflowStateChangeIcav2ReadyEventHandlerConstructProps {
   /* Names of table to write to */
@@ -177,15 +178,28 @@ export class WfmWorkflowStateChangeIcav2ReadyEventHandlerConstruct extends Const
         detailType: [props.detailType],
         detail: {
           status: ['READY'],
-          workflowName: [{ 'equals-ignore-case': props.workflowName }],
+          workflow: {
+            name: [{ 'equals-ignore-case': props.workflowName }],
+            version: [{ 'equals-ignore-case': props.workflowVersion }],
+          },
         },
       },
     });
 
-    /* Add rule as a target to the state machine */
+    // Add target of event to be the state machine
+    // But revert to a legacy event type for the target
     rule.addTarget(
       new events_targets.SfnStateMachine(this.stateMachineObj, {
-        input: events.RuleTargetInput.fromEventPath('$.detail'),
+        input: events.RuleTargetInput.fromObject({
+          status: EventField.fromPath('$.detail.status'),
+          timestamp: EventField.fromPath('$.detail.timestamp'),
+          workflowName: EventField.fromPath('$.detail.workflow.name'),
+          workflowVersion: EventField.fromPath('$.detail.workflow.version'),
+          workflowRunName: EventField.fromPath('$.detail.workflowRunName'),
+          portalRunId: EventField.fromPath('$.detail.portalRunId'),
+          linkedLibraries: EventField.fromPath('$.detail.libraries'),
+          payload: EventField.fromPath('$.detail.payload'),
+        }),
       })
     );
 
