@@ -2,14 +2,8 @@ import { Construct } from 'constructs';
 import { Stack, Environment, StackProps } from 'aws-cdk-lib';
 import { TokenServiceStackProps } from './stacks/token-service/deploy/stack';
 import { IcaEventPipeStack, IcaEventPipeStackProps } from './stacks/ica-event-pipe/stack';
-import {
-  Cttsov2Icav2PipelineTable,
-  Cttsov2Icav2PipelineTableStackProps,
-} from './stacks/cttso-v2-pipeline-dynamo-db/deploy/stack';
-import {
-  BclConvertTable,
-  BclConvertTableStackProps,
-} from './stacks/bclconvert-dynamo-db/deploy/stack';
+import { Cttsov2Icav2PipelineTableStackProps } from './stacks/cttso-v2-pipeline-dynamo-db/deploy/stack';
+import { BclConvertTableStackProps } from './stacks/bclconvert-dynamo-db/deploy/stack';
 import { BclconvertInteropQcIcav2PipelineTableStackProps } from './stacks/bclconvert-interop-qc-pipeline-dynamo-db/deploy/stack';
 import {
   StackyStatefulTablesStack,
@@ -37,23 +31,11 @@ import {
   RnasumIcav2PipelineTable,
   RnasumIcav2PipelineTableStackProps,
 } from './stacks/rnasum-pipeline-dynamo-db/deploy/stack';
-import {
-  PierianDxPipelineTable,
-  PierianDxPipelineTableStackProps,
-} from './stacks/pieriandx-pipeline-dynamo-db/deploy';
+import { PierianDxPipelineTableStackProps } from './stacks/pieriandx-pipeline-dynamo-db/deploy';
 import { AuthorizationManagerStackProps } from './stacks/authorization-manager/stack';
-import {
-  OncoanalyserNfPipelineTable,
-  OncoanalyserNfPipelineTableStackProps,
-} from './stacks/oncoanalyser-dynamodb/deploy/stack';
-import {
-  SashNfPipelineTable,
-  SashNfPipelineTableStackProps,
-} from './stacks/sash-dynamodb/deploy/stack';
-import {
-  OraCompressionIcav2PipelineTable,
-  OraCompressionIcav2PipelineTableStackProps,
-} from './stacks/ora-decompression-dynamodb/deploy/stack';
+import { OncoanalyserNfPipelineTableStackProps } from './stacks/oncoanalyser-dynamodb/deploy/stack';
+import { SashNfPipelineTableStackProps } from './stacks/sash-dynamodb/deploy/stack';
+import { OraCompressionIcav2PipelineTableStackProps } from './stacks/ora-decompression-dynamodb/deploy/stack';
 import { AccessKeySecretStackProps } from './stacks/access-key-secret';
 import { FastqManagerTableStackProps } from './stacks/fastq-manager-db/deploy/stack';
 import { FastqUnarchivingManagerTableStackProps } from './stacks/fastq-unarchiving-dynamodb/deploy';
@@ -206,6 +188,50 @@ export class StatefulStackCollection {
     //     ...statefulConfiguration.dataSharingS3AndTableStackProps,
     //   }
     // );
+    // this.cttsov2Icav2PipelineTableStack = new Cttsov2Icav2PipelineTable(
+    //   scope,
+    //   'Cttsov2Icav2PipelineTableStack',
+    //   {
+    //     ...this.createTemplateProps(env, 'Cttsov2Icav2PipelineTableStack'),
+    //     ...statefulConfiguration.cttsov2Icav2PipelineTableStackProps,
+    //   }
+    // );
+    // this.oraCompressionIcav2PipelineTableStack = new OraCompressionIcav2PipelineTable(
+    //   scope,
+    //   'OraCompressionIcav2PipelineTableStack',
+    //   {
+    //     ...this.createTemplateProps(env, 'OraCompressionIcav2PipelineTableStack'),
+    //     ...statefulConfiguration.oraCompressionIcav2PipelineTableStackProps,
+    //   }
+    // );
+
+    // this.BclConvertTableStack = new BclConvertTable(scope, 'BclConvertTableStack', {
+    //   ...this.createTemplateProps(env, 'BclConvertTableStack'),
+    //   ...statefulConfiguration.BclConvertTableStackProps,
+    // });
+    // this.pierianDxPipelineTableStack = new PierianDxPipelineTable(
+    //   scope,
+    //   'PierianDxPipelineTableStack',
+    //   {
+    //     ...this.createTemplateProps(env, 'PierianDxPipelineTableStack'),
+    //     ...statefulConfiguration.pierianDxPipelineTableStackProps,
+    //   }
+    // );
+    //
+    // this.oncoanalyserPipelineTableStack = new OncoanalyserNfPipelineTable(
+    //   scope,
+    //   'OncoanalyserNfPipelineTableStack',
+    //   {
+    //     ...this.createTemplateProps(env, 'OncoanalyserNfPipelineTableStack'),
+    //     ...statefulConfiguration.oncoanalyserPipelineTableStackProps,
+    //   }
+    // );
+    //
+    // this.sashPipelineTableStack = new SashNfPipelineTable(scope, 'SashNfPipelineTableStack', {
+    //   ...this.createTemplateProps(env, 'SashNfPipelineTableStack'),
+    //   ...statefulConfiguration.sashPipelineTableStackProps,
+    // });
+
     // Currently this only needs to be deployed if bucketName exist as props
     if (statefulConfiguration.dataBucketStackProps.bucketName) {
       this.dataBucketStack = new DataBucketStack(scope, 'DataBucketStack', {
@@ -218,15 +244,6 @@ export class StatefulStackCollection {
       ...this.createTemplateProps(env, 'IcaEventPipeStack'),
       ...statefulConfiguration.icaEventPipeStackProps,
     });
-
-    this.cttsov2Icav2PipelineTableStack = new Cttsov2Icav2PipelineTable(
-      scope,
-      'Cttsov2Icav2PipelineTableStack',
-      {
-        ...this.createTemplateProps(env, 'Cttsov2Icav2PipelineTableStack'),
-        ...statefulConfiguration.cttsov2Icav2PipelineTableStackProps,
-      }
-    );
 
     this.wgtsQcIcav2PipelineTableStack = new WgtsQcIcav2PipelineTable(
       scope,
@@ -269,20 +286,6 @@ export class StatefulStackCollection {
       }
     );
 
-    this.oraCompressionIcav2PipelineTableStack = new OraCompressionIcav2PipelineTable(
-      scope,
-      'OraCompressionIcav2PipelineTableStack',
-      {
-        ...this.createTemplateProps(env, 'OraCompressionIcav2PipelineTableStack'),
-        ...statefulConfiguration.oraCompressionIcav2PipelineTableStackProps,
-      }
-    );
-
-    this.BclConvertTableStack = new BclConvertTable(scope, 'BclConvertTableStack', {
-      ...this.createTemplateProps(env, 'BclConvertTableStack'),
-      ...statefulConfiguration.BclConvertTableStackProps,
-    });
-
     this.stackyStatefulTablesStack = new StackyStatefulTablesStack(
       scope,
       'StackyStatefulTablesStack',
@@ -291,29 +294,6 @@ export class StatefulStackCollection {
         ...statefulConfiguration.stackyStatefulTablesStackProps,
       }
     );
-
-    this.pierianDxPipelineTableStack = new PierianDxPipelineTable(
-      scope,
-      'PierianDxPipelineTableStack',
-      {
-        ...this.createTemplateProps(env, 'PierianDxPipelineTableStack'),
-        ...statefulConfiguration.pierianDxPipelineTableStackProps,
-      }
-    );
-
-    this.oncoanalyserPipelineTableStack = new OncoanalyserNfPipelineTable(
-      scope,
-      'OncoanalyserNfPipelineTableStack',
-      {
-        ...this.createTemplateProps(env, 'OncoanalyserNfPipelineTableStack'),
-        ...statefulConfiguration.oncoanalyserPipelineTableStackProps,
-      }
-    );
-
-    this.sashPipelineTableStack = new SashNfPipelineTable(scope, 'SashNfPipelineTableStack', {
-      ...this.createTemplateProps(env, 'SashNfPipelineTableStack'),
-      ...statefulConfiguration.sashPipelineTableStackProps,
-    });
   }
 
   /**

@@ -269,6 +269,10 @@ export class StatelessStackCollection {
     //     ...statelessConfiguration.cttsov2Icav2PipelineManagerStackProps,
     //   }
     // );
+    // this.bclConvertManagerStack = new BclConvertManagerStack(scope, 'BclConvertManagerStack', {
+    //   ...this.createTemplateProps(env, 'BclConvertManagerStack'),
+    //   ...statelessConfiguration.bclConvertManagerStackProps,
+    // });
 
     this.eventSchemaStack = new SchemaStack(scope, 'EventSchemaStack', {
       ...this.createTemplateProps(env, 'EventSchemaStack'),
@@ -324,11 +328,6 @@ export class StatelessStackCollection {
         ...statelessConfiguration.rnasumIcav2PipelineManagerStackProps,
       }
     );
-
-    this.bclConvertManagerStack = new BclConvertManagerStack(scope, 'BclConvertManagerStack', {
-      ...this.createTemplateProps(env, 'BclConvertManagerStack'),
-      ...statelessConfiguration.bclConvertManagerStackProps,
-    });
 
     this.stackyMcStackFaceStack = new GlueStack(scope, 'StackyMcStackFaceStack', {
       ...this.createTemplateProps(env, 'StackyMcStackFaceStack'),
