@@ -199,9 +199,11 @@ export class TnCompleteToUmccriseReadyConstruct extends Construct {
         detail: {
           status: [{ 'equals-ignore-case': this.UmccriseReadyMap.triggerStatus }],
           workflow: {
-            name: {
-              'equals-ignore-case': this.UmccriseReadyMap.triggerWorkflowName,
-            },
+            name: [
+              {
+                'equals-ignore-case': this.UmccriseReadyMap.triggerWorkflowName,
+              },
+            ],
           },
         },
       },
