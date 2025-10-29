@@ -10,7 +10,7 @@ import {
   StackyStatefulTablesStackProps,
 } from './stacks/stacky-mcstackface-dynamodb';
 import { PostgresManagerStackProps } from './stacks/postgres-manager/deploy/stack';
-import { DataBucketStack, DataBucketStackProps } from './stacks/data/stack';
+// import { DataBucketStack, DataBucketStackProps } from './stacks/data/stack';
 import {
   WgtsQcIcav2PipelineTable,
   WgtsQcIcav2PipelineTableStackProps,
@@ -45,7 +45,7 @@ import { DataSharingS3AndTableStackProps } from './stacks/data-sharing-s3-and-db
 import { SharedStackProps } from './stacks/shared/stack';
 
 export interface StatefulStackCollectionProps {
-  dataBucketStackProps: DataBucketStackProps;
+  // dataBucketStackProps: DataBucketStackProps;
   authorizationManagerStackProps: AuthorizationManagerStackProps;
   sharedStackProps: SharedStackProps;
   postgresManagerStackProps: PostgresManagerStackProps;
@@ -233,12 +233,12 @@ export class StatefulStackCollection {
     // });
 
     // Currently this only needs to be deployed if bucketName exist as props
-    if (statefulConfiguration.dataBucketStackProps.bucketName) {
-      this.dataBucketStack = new DataBucketStack(scope, 'DataBucketStack', {
-        ...this.createTemplateProps(env, 'DataBucketStack'),
-        ...statefulConfiguration.dataBucketStackProps,
-      });
-    }
+    // if (statefulConfiguration.dataBucketStackProps.bucketName) {
+    //   this.dataBucketStack = new DataBucketStack(scope, 'DataBucketStack', {
+    //     ...this.createTemplateProps(env, 'DataBucketStack'),
+    //     ...statefulConfiguration.dataBucketStackProps,
+    //   });
+    // }
 
     this.icaEventPipeStack = new IcaEventPipeStack(scope, 'IcaEventPipeStack', {
       ...this.createTemplateProps(env, 'IcaEventPipeStack'),

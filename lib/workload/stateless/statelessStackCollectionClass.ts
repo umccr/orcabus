@@ -6,7 +6,7 @@ import { BclconvertInteropQcIcav2PipelineManagerStackProps } from './stacks/bclc
 import { Cttsov2Icav2PipelineManagerStackProps } from './stacks/cttso-v2-pipeline-manager/deploy/stack';
 import { SchemaStack, SchemaStackProps } from './stacks/schema/stack';
 import {
-  BclConvertManagerStack,
+  // BclConvertManagerStack,
   BclConvertManagerStackProps,
 } from './stacks/bclconvert-manager/deploy/stack';
 import { GlueStack, GlueStackProps } from './stacks/stacky-mcstackface/glue-constructs';
