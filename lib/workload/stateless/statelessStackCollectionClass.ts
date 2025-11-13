@@ -38,7 +38,7 @@ import { OncoanalyserNfPipelineManagerStackProps } from './stacks/oncoanalyser-p
 import { SashNfPipelineManagerStackProps } from './stacks/sash-pipeline-manager/deploy';
 import { OraDecompressionManagerStackProps } from './stacks/ora-decompression-manager/deploy';
 import { PgDDStackProps } from './stacks/pg-dd/deploy/stack';
-import { DataMigrateStack, DataMigrateStackProps } from './stacks/data-migrate/deploy/stack';
+import { DataMigrateStackProps } from './stacks/data-migrate/deploy/stack';
 import { HtsgetStackProps } from './stacks/htsget/stack';
 import { SampleSheetCheckerStackProps } from './stacks/sample-sheet-check/stack';
 import { FastqManagerStackProps } from './stacks/fastq-manager/deploy/stack';
@@ -274,6 +274,11 @@ export class StatelessStackCollection {
     //   ...statelessConfiguration.bclConvertManagerStackProps,
     // });
 
+    // this.dataMigrate = new DataMigrateStack(scope, 'DataMigrateStack', {
+    //   ...this.createTemplateProps(env, 'DataMigrateStack'),
+    //   ...statelessConfiguration.dataMigrateProps,
+    // });
+
     this.eventSchemaStack = new SchemaStack(scope, 'EventSchemaStack', {
       ...this.createTemplateProps(env, 'EventSchemaStack'),
       ...statelessConfiguration.eventSchemaStackProps,
@@ -332,11 +337,6 @@ export class StatelessStackCollection {
     this.stackyMcStackFaceStack = new GlueStack(scope, 'StackyMcStackFaceStack', {
       ...this.createTemplateProps(env, 'StackyMcStackFaceStack'),
       ...statelessConfiguration.stackyMcStackFaceProps,
-    });
-
-    this.dataMigrate = new DataMigrateStack(scope, 'DataMigrateStack', {
-      ...this.createTemplateProps(env, 'DataMigrateStack'),
-      ...statelessConfiguration.dataMigrateProps,
     });
   }
 
