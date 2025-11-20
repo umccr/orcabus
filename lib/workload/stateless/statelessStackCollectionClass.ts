@@ -4,7 +4,10 @@ import { FilemanagerProps } from './stacks/filemanager/deploy/stack';
 import { BsshIcav2FastqCopyManagerStackProps } from './stacks/bssh-icav2-fastq-copy-manager/deploy/stack';
 import { BclconvertInteropQcIcav2PipelineManagerStackProps } from './stacks/bclconvert-interop-qc-pipeline-manager/deploy/stack';
 import { Cttsov2Icav2PipelineManagerStackProps } from './stacks/cttso-v2-pipeline-manager/deploy/stack';
-import { SchemaStack, SchemaStackProps } from './stacks/schema/stack';
+import {
+  // SchemaStack,
+  SchemaStackProps,
+} from './stacks/schema/stack';
 import {
   // BclConvertManagerStack,
   BclConvertManagerStackProps,
@@ -279,15 +282,15 @@ export class StatelessStackCollection {
     //   ...statelessConfiguration.dataMigrateProps,
     // });
 
-    this.eventSchemaStack = new SchemaStack(scope, 'EventSchemaStack', {
-      ...this.createTemplateProps(env, 'EventSchemaStack'),
-      ...statelessConfiguration.eventSchemaStackProps,
-    });
+    // this.eventSchemaStack = new SchemaStack(scope, 'EventSchemaStack', {
+    //   ...this.createTemplateProps(env, 'EventSchemaStack'),
+    //   ...statelessConfiguration.eventSchemaStackProps,
+    // });
 
-    this.dataSchemaStack = new SchemaStack(scope, 'DataSchemaStack', {
-      ...this.createTemplateProps(env, 'DataSchemaStack'),
-      ...statelessConfiguration.dataSchemaStackProps,
-    });
+    // this.dataSchemaStack = new SchemaStack(scope, 'DataSchemaStack', {
+    //   ...this.createTemplateProps(env, 'DataSchemaStack'),
+    //   ...statelessConfiguration.dataSchemaStackProps,
+    // });
 
     this.wgtsQcIcav2PipelineManagerStack = new WgtsQcIcav2PipelineManagerStack(
       scope,
