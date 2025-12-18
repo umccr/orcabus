@@ -1,9 +1,3 @@
 # Sample Sheet Checker
 
-Deploy sample-sheet-checker in a lambda
-
-## Checker Implementation
-
-```sh
-cd ./sample-sheet-check-lambda
-```
+THIS PROJECT HAS BEEN MOVED TO [OrcaBus/service-sample-sheet-check](https://github.com/orcabus/service-sample-sheet-check)
