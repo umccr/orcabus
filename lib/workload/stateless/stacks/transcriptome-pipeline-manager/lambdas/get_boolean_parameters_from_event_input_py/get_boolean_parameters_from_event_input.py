@@ -49,6 +49,14 @@ def handler(event, context) -> Dict[str, Dict]:
                 "requirements": {
                     "DockerRequirement": {
                         "dockerPull": "079623148045.dkr.ecr.us-east-1.amazonaws.com/cp-prod/627166f0-ab0e-40f4-a191-91e6fcaf50d2:latest"
+                    },
+                    "ResourceRequirement": {
+                        "coresMin": 24,
+                        "ramMin": 256000,
+                        "class": "ResourceRequirement",
+                        "https://platform.illumina.com/rdf/ica/resources:tier": "standard",
+                        "https://platform.illumina.com/rdf/ica/resources:type": "fpga2",
+                        "https://platform.illumina.com/rdf/ica/resources:size": "medium",
                     }
                 }
             },
