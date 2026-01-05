@@ -5,16 +5,10 @@ import { IcaEventPipeStack, IcaEventPipeStackProps } from './stacks/ica-event-pi
 import { Cttsov2Icav2PipelineTableStackProps } from './stacks/cttso-v2-pipeline-dynamo-db/deploy/stack';
 import { BclConvertTableStackProps } from './stacks/bclconvert-dynamo-db/deploy/stack';
 import { BclconvertInteropQcIcav2PipelineTableStackProps } from './stacks/bclconvert-interop-qc-pipeline-dynamo-db/deploy/stack';
-import {
-  StackyStatefulTablesStack,
-  StackyStatefulTablesStackProps,
-} from './stacks/stacky-mcstackface-dynamodb';
+import { StackyStatefulTablesStackProps } from './stacks/stacky-mcstackface-dynamodb';
 import { PostgresManagerStackProps } from './stacks/postgres-manager/deploy/stack';
 // import { DataBucketStack, DataBucketStackProps } from './stacks/data/stack';
-import {
-  WgtsQcIcav2PipelineTable,
-  WgtsQcIcav2PipelineTableStackProps,
-} from './stacks/wgtsqc-pipeline-dynamo-db/deploy/stack';
+import { WgtsQcIcav2PipelineTableStackProps } from './stacks/wgtsqc-pipeline-dynamo-db/deploy/stack';
 import {
   TnIcav2PipelineTable,
   TnIcav2PipelineTableStackProps,
@@ -240,19 +234,28 @@ export class StatefulStackCollection {
     //   });
     // }
 
+    // this.wgtsQcIcav2PipelineTableStack = new WgtsQcIcav2PipelineTable(
+    //   scope,
+    //   'WgtsQcIcav2PipelineTableStack',
+    //   {
+    //     ...this.createTemplateProps(env, 'WgtsQcIcav2PipelineTableStack'),
+    //     ...statefulConfiguration.wgtsQcIcav2PipelineTableStackProps,
+    //   }
+    // );
+
+    // this.stackyStatefulTablesStack = new StackyStatefulTablesStack(
+    //   scope,
+    //   'StackyStatefulTablesStack',
+    //   {
+    //     ...this.createTemplateProps(env, 'StackyStatefulTablesStack'),
+    //     ...statefulConfiguration.stackyStatefulTablesStackProps,
+    //   }
+    // );
+
     this.icaEventPipeStack = new IcaEventPipeStack(scope, 'IcaEventPipeStack', {
       ...this.createTemplateProps(env, 'IcaEventPipeStack'),
       ...statefulConfiguration.icaEventPipeStackProps,
     });
-
-    this.wgtsQcIcav2PipelineTableStack = new WgtsQcIcav2PipelineTable(
-      scope,
-      'WgtsQcIcav2PipelineTableStack',
-      {
-        ...this.createTemplateProps(env, 'WgtsQcIcav2PipelineTableStack'),
-        ...statefulConfiguration.wgtsQcIcav2PipelineTableStackProps,
-      }
-    );
 
     this.tnIcav2PipelineTableStack = new TnIcav2PipelineTable(scope, 'TnIcav2PipelineTableStack', {
       ...this.createTemplateProps(env, 'TnIcav2PipelineTableStack'),
@@ -283,15 +286,6 @@ export class StatefulStackCollection {
       {
         ...this.createTemplateProps(env, 'RnasumIcav2PipelineTableStack'),
         ...statefulConfiguration.rnasumIcav2PipelineTableStackProps,
-      }
-    );
-
-    this.stackyStatefulTablesStack = new StackyStatefulTablesStack(
-      scope,
-      'StackyStatefulTablesStack',
-      {
-        ...this.createTemplateProps(env, 'StackyStatefulTablesStack'),
-        ...statefulConfiguration.stackyStatefulTablesStackProps,
       }
     );
   }

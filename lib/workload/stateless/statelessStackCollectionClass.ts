@@ -12,11 +12,8 @@ import {
   // BclConvertManagerStack,
   BclConvertManagerStackProps,
 } from './stacks/bclconvert-manager/deploy/stack';
-import { GlueStack, GlueStackProps } from './stacks/stacky-mcstackface/glue-constructs';
-import {
-  WgtsQcIcav2PipelineManagerStack,
-  WgtsQcIcav2PipelineManagerStackProps,
-} from './stacks/wgts-alignment-qc-pipeline-manager/deploy';
+import { GlueStackProps } from './stacks/stacky-mcstackface/glue-constructs';
+import { WgtsQcIcav2PipelineManagerStackProps } from './stacks/wgts-alignment-qc-pipeline-manager/deploy';
 import {
   TnIcav2PipelineManagerStack,
   TnIcav2PipelineManagerStackProps,
@@ -292,14 +289,19 @@ export class StatelessStackCollection {
     //   ...statelessConfiguration.dataSchemaStackProps,
     // });
 
-    this.wgtsQcIcav2PipelineManagerStack = new WgtsQcIcav2PipelineManagerStack(
-      scope,
-      'WgtsQcIcav2PipelineManagerStack',
-      {
-        ...this.createTemplateProps(env, 'WgtsQcIcav2PipelineManagerStack'),
-        ...statelessConfiguration.wgtsQcIcav2PipelineManagerStackProps,
-      }
-    );
+    // this.stackyMcStackFaceStack = new GlueStack(scope, 'StackyMcStackFaceStack', {
+    //   ...this.createTemplateProps(env, 'StackyMcStackFaceStack'),
+    //   ...statelessConfiguration.stackyMcStackFaceProps,
+    // });
+
+    // this.wgtsQcIcav2PipelineManagerStack = new WgtsQcIcav2PipelineManagerStack(
+    //   scope,
+    //   'WgtsQcIcav2PipelineManagerStack',
+    //   {
+    //     ...this.createTemplateProps(env, 'WgtsQcIcav2PipelineManagerStack'),
+    //     ...statelessConfiguration.wgtsQcIcav2PipelineManagerStackProps,
+    //   }
+    // );
 
     this.tnIcav2PipelineManagerStack = new TnIcav2PipelineManagerStack(
       scope,
@@ -336,11 +338,6 @@ export class StatelessStackCollection {
         ...statelessConfiguration.rnasumIcav2PipelineManagerStackProps,
       }
     );
-
-    this.stackyMcStackFaceStack = new GlueStack(scope, 'StackyMcStackFaceStack', {
-      ...this.createTemplateProps(env, 'StackyMcStackFaceStack'),
-      ...statelessConfiguration.stackyMcStackFaceProps,
-    });
   }
 
   /**
