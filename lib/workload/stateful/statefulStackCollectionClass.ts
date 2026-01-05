@@ -240,19 +240,28 @@ export class StatefulStackCollection {
     //   });
     // }
 
+    // this.wgtsQcIcav2PipelineTableStack = new WgtsQcIcav2PipelineTable(
+    //   scope,
+    //   'WgtsQcIcav2PipelineTableStack',
+    //   {
+    //     ...this.createTemplateProps(env, 'WgtsQcIcav2PipelineTableStack'),
+    //     ...statefulConfiguration.wgtsQcIcav2PipelineTableStackProps,
+    //   }
+    // );
+
+    // this.stackyStatefulTablesStack = new StackyStatefulTablesStack(
+    //   scope,
+    //   'StackyStatefulTablesStack',
+    //   {
+    //     ...this.createTemplateProps(env, 'StackyStatefulTablesStack'),
+    //     ...statefulConfiguration.stackyStatefulTablesStackProps,
+    //   }
+    // );
+
     this.icaEventPipeStack = new IcaEventPipeStack(scope, 'IcaEventPipeStack', {
       ...this.createTemplateProps(env, 'IcaEventPipeStack'),
       ...statefulConfiguration.icaEventPipeStackProps,
     });
-
-    this.wgtsQcIcav2PipelineTableStack = new WgtsQcIcav2PipelineTable(
-      scope,
-      'WgtsQcIcav2PipelineTableStack',
-      {
-        ...this.createTemplateProps(env, 'WgtsQcIcav2PipelineTableStack'),
-        ...statefulConfiguration.wgtsQcIcav2PipelineTableStackProps,
-      }
-    );
 
     this.tnIcav2PipelineTableStack = new TnIcav2PipelineTable(scope, 'TnIcav2PipelineTableStack', {
       ...this.createTemplateProps(env, 'TnIcav2PipelineTableStack'),
@@ -283,15 +292,6 @@ export class StatefulStackCollection {
       {
         ...this.createTemplateProps(env, 'RnasumIcav2PipelineTableStack'),
         ...statefulConfiguration.rnasumIcav2PipelineTableStackProps,
-      }
-    );
-
-    this.stackyStatefulTablesStack = new StackyStatefulTablesStack(
-      scope,
-      'StackyStatefulTablesStack',
-      {
-        ...this.createTemplateProps(env, 'StackyStatefulTablesStack'),
-        ...statefulConfiguration.stackyStatefulTablesStackProps,
       }
     );
   }
