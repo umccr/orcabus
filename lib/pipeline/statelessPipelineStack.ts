@@ -203,7 +203,8 @@ export class StatelessPipelineStack extends cdk.Stack {
       ),
       {
         pre: [stripAssetsFromAssembly],
-        post: [new UiOpenAPITestStep(this, 'UiOpenAPITestStep', { testStage: AppStage.GAMMA })],
+        // No longer rely on this test as backend API is moved to different repo
+        // post: [new UiOpenAPITestStep(this, 'UiOpenAPITestStep', { testStage: AppStage.GAMMA })],
       }
     );
 
