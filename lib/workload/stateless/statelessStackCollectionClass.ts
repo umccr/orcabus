@@ -12,11 +12,8 @@ import {
   // BclConvertManagerStack,
   BclConvertManagerStackProps,
 } from './stacks/bclconvert-manager/deploy/stack';
-import { GlueStack, GlueStackProps } from './stacks/stacky-mcstackface/glue-constructs';
-import {
-  WgtsQcIcav2PipelineManagerStack,
-  WgtsQcIcav2PipelineManagerStackProps,
-} from './stacks/wgts-alignment-qc-pipeline-manager/deploy';
+import { GlueStackProps } from './stacks/stacky-mcstackface/glue-constructs';
+import { WgtsQcIcav2PipelineManagerStackProps } from './stacks/wgts-alignment-qc-pipeline-manager/deploy';
 import {
   TnIcav2PipelineManagerStack,
   TnIcav2PipelineManagerStackProps,

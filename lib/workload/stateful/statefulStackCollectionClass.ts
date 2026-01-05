@@ -5,16 +5,10 @@ import { IcaEventPipeStack, IcaEventPipeStackProps } from './stacks/ica-event-pi
 import { Cttsov2Icav2PipelineTableStackProps } from './stacks/cttso-v2-pipeline-dynamo-db/deploy/stack';
 import { BclConvertTableStackProps } from './stacks/bclconvert-dynamo-db/deploy/stack';
 import { BclconvertInteropQcIcav2PipelineTableStackProps } from './stacks/bclconvert-interop-qc-pipeline-dynamo-db/deploy/stack';
-import {
-  StackyStatefulTablesStack,
-  StackyStatefulTablesStackProps,
-} from './stacks/stacky-mcstackface-dynamodb';
+import { StackyStatefulTablesStackProps } from './stacks/stacky-mcstackface-dynamodb';
 import { PostgresManagerStackProps } from './stacks/postgres-manager/deploy/stack';
 // import { DataBucketStack, DataBucketStackProps } from './stacks/data/stack';
-import {
-  WgtsQcIcav2PipelineTable,
-  WgtsQcIcav2PipelineTableStackProps,
-} from './stacks/wgtsqc-pipeline-dynamo-db/deploy/stack';
+import { WgtsQcIcav2PipelineTableStackProps } from './stacks/wgtsqc-pipeline-dynamo-db/deploy/stack';
 import {
   TnIcav2PipelineTable,
   TnIcav2PipelineTableStackProps,
