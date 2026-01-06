@@ -17,7 +17,6 @@ import {
 import { getEnvironmentConfig } from '../../config/config';
 import { AppStage } from '../../config/constants';
 import { LogGroup, RetentionDays } from 'aws-cdk-lib/aws-logs';
-import { UiOpenAPITestStep } from './component/uiOpenAPITest';
 
 export class StatelessPipelineStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props: cdk.StackProps) {
@@ -203,7 +202,8 @@ export class StatelessPipelineStack extends cdk.Stack {
       ),
       {
         pre: [stripAssetsFromAssembly],
-        post: [new UiOpenAPITestStep(this, 'UiOpenAPITestStep', { testStage: AppStage.GAMMA })],
+        // No longer rely on this test as backend API is moved to different repo
+        // post: [new UiOpenAPITestStep(this, 'UiOpenAPITestStep', { testStage: AppStage.GAMMA })],
       }
     );
 
