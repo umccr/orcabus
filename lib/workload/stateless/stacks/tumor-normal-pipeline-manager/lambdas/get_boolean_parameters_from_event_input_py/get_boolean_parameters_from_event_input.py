@@ -40,35 +40,6 @@ def handler(event, context) -> Dict[str, Dict]:
                         "dockerPull": "quay.io/biocontainers/multiqc:1.14--pyhdfd78af_0"
                     }
                 }
-            },
-            # F2 Image
-            "workflow.cwl#dragen-somatic-with-germline-pipeline--4.2.4/run_dragen_germline_step": {
-                "requirements": {
-                    "DockerRequirement": {
-                        "dockerPull": "079623148045.dkr.ecr.us-east-1.amazonaws.com/cp-prod/627166f0-ab0e-40f4-a191-91e6fcaf50d2:latest"
-                    },
-                    "ResourceRequirement": {
-                        "coresMin": 24,
-                        "ramMin": 256000,
-                        "https://platform.illumina.com/rdf/ica/resources:tier": "standard",
-                        "https://platform.illumina.com/rdf/ica/resources:type": "fpga2",
-                        "https://platform.illumina.com/rdf/ica/resources:size": "medium",
-                    }
-                }
-            },
-            "workflow.cwl#dragen-somatic-with-germline-pipeline--4.2.4/run_dragen_somatic_step": {
-                "requirements": {
-                    "DockerRequirement": {
-                        "dockerPull": "079623148045.dkr.ecr.us-east-1.amazonaws.com/cp-prod/627166f0-ab0e-40f4-a191-91e6fcaf50d2:latest"
-                    },
-                    "ResourceRequirement": {
-                        "coresMin": 24,
-                        "ramMin": 256000,
-                        "https://platform.illumina.com/rdf/ica/resources:tier": "standard",
-                        "https://platform.illumina.com/rdf/ica/resources:type": "fpga2",
-                        "https://platform.illumina.com/rdf/ica/resources:size": "medium",
-                    }
-                }
             }
         }
     }
